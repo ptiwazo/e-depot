@@ -1,0 +1,33 @@
+# Render Blueprint — API e-depot (NestJS) + PostgreSQL managé.
+# Déploiement : pousser le repo sur GitHub → Render → New → Blueprint → sélectionner ce repo.
+# Render provisionne la base, injecte DATABASE_URL, build et démarre l'API.
+services:
+  - type: web
+    name: e-depot-api
+    runtime: node
+    rootDir: apps/api
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    # --include=dev : le build a besoin des devDeps (nest CLI, prisma, ts-node).
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: e-depot-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: NODE_VERSION
+        value: "20"
+      # À renseigner après création du site Netlify (origine autorisée CORS) :
+      - key: CORS_ORIGIN
+        sync: false
+
+databases:
+  - name: e-depot-db
+    plan: free
+    region: frankfurt

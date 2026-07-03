@@ -1,0 +1,17 @@
+# Netlify — front React e-depot (monorepo npm workspaces).
+# Connecter le repo sur Netlify ; définir la variable d'env VITE_API_URL
+# (URL publique de l'API Render, ex. https://e-depot-api.onrender.com) dans
+# Site settings → Environment variables, PUIS déclencher un deploy.
+[build]
+  base = "apps/web"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA : toutes les routes servent index.html (React Router).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

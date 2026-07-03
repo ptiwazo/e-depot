@@ -1,0 +1,134 @@
+// e-depot — MEDLOG CI OFF-DOCK appointment system
+// PostgreSQL (production). Les statuts / rôles / types sont des String validés côté code.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  password         String
+  name             String
+  phone            String?
+  role             String   // ADMIN | OPERATOR | TRANSPORTER | DRIVER | MSC
+  active           Boolean  @default(true)
+  transportCompany TransportCompany? @relation(fields: [companyId], references: [id])
+  companyId        String?
+  offDock          OffDock? @relation(fields: [offDockId], references: [id])
+  offDockId        String?
+  createdAppointments Appointment[] @relation("CreatedBy")
+  events           AppointmentEvent[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model TransportCompany {
+  id        String   @id @default(cuid())
+  name      String
+  rccm      String?  // registre du commerce
+  phone     String?
+  email     String?
+  users     User[]
+  appointments Appointment[]
+  createdAt DateTime @default(now())
+}
+
+// Base des conteneurs vides MSC attendus au retour, chargée par l'administrateur.
+// La soumission d'une demande n'est autorisée que si (conteneur + BL) figurent ici.
+model ContainerManifest {
+  id              String   @id @default(cuid())
+  containerNumber String   @unique
+  blNumber        String
+  containerType   String   @default("DRY") // DRY | REEFER | OPEN_TOP | FLAT_RACK
+  shippingLine    String   @default("MSC")
+  consignee       String?  // client / destinataire
+  transporteur    String?  // transporteur (aligné sur PARC.transporteur côté HFSQL)
+  createdAt       DateTime @default(now())
+
+  @@index([blNumber])
+}
+
+model OffDock {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  city          String
+  lat           Float
+  lng           Float
+  dailyCapacity Int      @default(200)   // conteneurs / jour
+  shiftCapacity Int      @default(60)    // conteneurs / shift (poste portuaire)
+  parkingSlots  Int      @default(10)    // camions traitables simultanément (parc) — sert au calcul auto de la congestion
+  acceptsReefer Boolean  @default(true)
+  active        Boolean  @default(true)
+  users         User[]
+  appointments  Appointment[]
+  createdAt     DateTime @default(now())
+}
+
+model Appointment {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  containerNumber String
+  containerType   String   @default("DRY") // DRY | REEFER | OPEN_TOP | FLAT_RACK
+  isoValid        Boolean  @default(true)
+  blNumber        String
+  company         TransportCompany @relation(fields: [companyId], references: [id])
+  companyId       String
+  truckPlate      String?  // saisie manuelle
+  trailerPlate    String?  // saisie manuelle
+  driverName      String?  // saisie manuelle
+  driverPhone     String?  // saisie manuelle
+  offDock         OffDock? @relation(fields: [offDockId], references: [id])
+  offDockId       String?
+  requestedDate   DateTime
+  shiftCode       String?  // JOUR | NUIT (choisi par le transporteur)
+  slotStart       DateTime?
+  slotEnd         DateTime?
+  status          String   @default("REQUESTED")
+  qrToken         String?  @unique
+  createdBy       User     @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById     String
+  events          AppointmentEvent[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([offDockId, slotStart])
+}
+
+model AppointmentEvent {
+  id            String   @id @default(cuid())
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  appointmentId String
+  fromStatus    String?
+  toStatus      String
+  note          String?
+  actor         User?    @relation(fields: [actorId], references: [id])
+  actorId       String?
+  createdAt     DateTime @default(now())
+}
+
+model Shift {
+  code      String   @id // JOUR | NUIT
+  label     String
+  startTime String   // "HH:MM"
+  endTime   String   // "HH:MM"
+  order     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      String?
+  createdAt DateTime @default(now())
+}

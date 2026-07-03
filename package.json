@@ -1,0 +1,30 @@
+{
+  "name": "e-depot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MEDLOG CI — Système de prise de rendez-vous pour le retour des conteneurs vides MSC vers les OFF-DOCK",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c yellow,blue \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/api run build && npm --workspace apps/web run build",
+    "test": "npm --workspace apps/api run test",
+    "db:setup": "npm --workspace apps/api run db:setup"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true,
+    "esbuild@0.21.5": true,
+    "@nestjs/core@10.4.22": true,
+    "core-js": false,
+    "odbc@2.5.0": true
+  }
+}
