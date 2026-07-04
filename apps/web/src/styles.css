@@ -216,7 +216,56 @@ input:focus, select:focus { outline: 2px solid var(--yellow); border-color: var(
 @media (max-width: 800px) { .login-brand { display: none; } .login-form-side { width: 100%; } }
 
 .qr-box { text-align: center; }
-.qr-box img { width: 240px; height: 240px; border: 8px solid var(--white); border-radius: 12px; box-shadow: var(--shadow); }
+.qr-box img { width: 240px; height: 240px; max-width: 100%; border: 8px solid var(--white); border-radius: 12px; box-shadow: var(--shadow); }
+
+/* ===========================================================================
+   Responsive — tablette / téléphone
+   =========================================================================== */
+@media (max-width: 768px) {
+  /* La barre latérale passe EN TÊTE, en horizontal (plus de colonne de 240px). */
+  .app { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 10px 14px;
+  }
+  .sidebar .logo { margin-bottom: 0; margin-right: auto; font-size: 17px; }
+  .nav-link { padding: 7px 10px; font-size: 13px; }
+  .sidebar .spacer { display: none; }
+  .sidebar .userbox {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    padding-top: 10px;
+    margin-top: 2px;
+  }
+  .sidebar .userbox b { display: inline; }
+  .sidebar .userbox .logout { width: auto !important; margin-top: 0; margin-left: auto; }
+
+  /* Marges réduites + titres compacts. */
+  .topbar { padding: 12px 16px; flex-wrap: wrap; gap: 6px 12px; }
+  .content { padding: 16px 14px; }
+  h1 { font-size: 18px; }
+
+  /* Tableaux larges : défilement horizontal DANS la carte → la page ne se décale plus. */
+  .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 520px; }
+}
+
+@media (max-width: 480px) {
+  .content { padding: 14px 10px; }
+  .card { padding: 14px; }
+  .card.pad-lg { padding: 16px; }
+  .login-form-side { padding: 24px 18px; }
+  .btn { padding: 10px 14px; }
+}
 .timeline { list-style: none; padding: 0; margin: 0; }
 .timeline li { position: relative; padding: 0 0 14px 22px; border-left: 2px solid var(--grey-200); }
 .timeline li:last-child { border-left-color: transparent; }
