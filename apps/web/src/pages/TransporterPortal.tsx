@@ -50,7 +50,20 @@ export function TransporterList() {
   );
 }
 
-interface VerifyResult { found: boolean; blMatch: boolean; containerType?: string; consignee?: string; message: string }
+interface VerifyResult {
+  found: boolean;
+  blMatch: boolean;
+  containerType?: string;
+  consignee?: string;
+  message: string;
+  propreMoyen?: boolean;
+  minLeadHours?: number;
+}
+
+// Date la plus proche réservable (aujourd'hui + délai de préavis, au format AAAA-MM-JJ).
+function minDateFor(hours?: number): string {
+  return new Date(Date.now() + (hours ?? 0) * 3600_000).toISOString().slice(0, 10);
+}
 
 export function NewAppointment() {
   const nav = useNavigate();
@@ -89,12 +102,18 @@ export function NewAppointment() {
         `/manifest/verify?container=${encodeURIComponent(form.containerNumber)}&bl=${encodeURIComponent(form.blNumber)}`,
       );
       setVerify(res);
+      // Repousse la date si elle est plus proche que le préavis exigé pour ce conteneur.
+      if (res.found && res.blMatch) {
+        const md = minDateFor(res.minLeadHours);
+        if (form.requestedDate < md) set('requestedDate', md);
+      }
     } catch {
       /* ignore */
     }
   }
 
   const baseOk = verify?.found && verify?.blMatch;
+  const minDate = minDateFor(baseOk ? verify?.minLeadHours : 0);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -163,6 +182,7 @@ export function NewAppointment() {
             <div className={`alert ${baseOk ? 'ok' : 'error'} small`}>
               {baseOk
                 ? `✓ ${verify.message}${verify.consignee ? ` — client ${verify.consignee}` : ''} (type ${verify.containerType})`
+                  + ` · préavis minimum ${verify.minLeadHours}h${verify.propreMoyen ? ' — propre moyen' : ''}`
                 : `✗ ${verify.message}`}
             </div>
           )}
@@ -193,7 +213,7 @@ export function NewAppointment() {
           <div className="row">
             <div className="field">
               <label>Date souhaitée *</label>
-              <input type="date" value={form.requestedDate} onChange={(e) => set('requestedDate', e.target.value)} required />
+              <input type="date" min={minDate} value={form.requestedDate} onChange={(e) => set('requestedDate', e.target.value)} required />
             </div>
             <div className="field">
               <label>Shift souhaité *</label>

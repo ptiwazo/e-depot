@@ -12,6 +12,7 @@ import {
   CONTAINER_REPOSITORY,
   ContainerRepository,
 } from '../containers/container.repository';
+import { SettingsService } from '../settings/settings.service';
 import {
   buildShift,
   selectOffDockForShift,
@@ -30,6 +31,7 @@ export class AppointmentsService {
   constructor(
     private prisma: PrismaService,
     @Inject(CONTAINER_REPOSITORY) private readonly containers: ContainerRepository,
+    private readonly settings: SettingsService,
   ) {}
 
   private ref(): string {
@@ -96,6 +98,21 @@ export class AppointmentsService {
     // 3. Shift choisi par le transporteur (l'OFF-DOCK sera affecté par un agent MEDLOG).
     const shiftCfg = await this.prisma.shift.findUnique({ where: { code: dto.shiftCode } });
     if (!shiftCfg) throw new BadRequestException('Shift invalide');
+
+    // 4. Délai de préavis minimum : renforcé si le conteneur est en « propre moyen ».
+    //    On compare l'heure de début du créneau (date + heure du shift) à maintenant + délai.
+    //    (Côte d'Ivoire = UTC, pas de décalage à gérer.)
+    const { propreMoyen, minHours } = await this.settings.leadHoursFor(entry.transporteur);
+    const [sh, sm] = shiftCfg.startTime.split(':').map(Number);
+    const slotStart = new Date(requestedDate);
+    slotStart.setHours(sh || 0, sm || 0, 0, 0);
+    if (slotStart.getTime() < Date.now() + minHours * 3600_000) {
+      throw new BadRequestException(
+        `Préavis insuffisant : ce conteneur exige une réservation au moins ${minHours}h à l'avance` +
+          (propreMoyen ? ' (transporteur « propre moyen »)' : '') +
+          '. Choisissez une date/un créneau plus lointain.',
+      );
+    }
 
     const reference = this.ref();
 

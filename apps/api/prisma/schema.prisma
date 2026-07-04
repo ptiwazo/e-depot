@@ -123,6 +123,13 @@ model Shift {
   updatedAt DateTime @updatedAt
 }
 
+// Paramètres généraux réglables par l'administrateur (clé/valeur).
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
   actorId   String?

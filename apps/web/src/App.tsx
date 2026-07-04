@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import OffDocks from './pages/OffDocks';
 import ShiftsAdmin from './pages/ShiftsAdmin';
+import SettingsAdmin from './pages/SettingsAdmin';
 import AgentQueue from './pages/AgentQueue';
 import ManifestAdmin from './pages/ManifestAdmin';
 import Appointments from './pages/Appointments';
@@ -49,6 +50,7 @@ export default function App() {
       <Route path="/admin/offdocks" element={<Protected roles={['ADMIN']}><OffDocks /></Protected>} />
       <Route path="/admin/shifts" element={<Protected roles={['ADMIN']}><ShiftsAdmin /></Protected>} />
       <Route path="/admin/manifest" element={<Protected roles={['ADMIN']}><ManifestAdmin /></Protected>} />
+      <Route path="/admin/settings" element={<Protected roles={['ADMIN']}><SettingsAdmin /></Protected>} />
 
       <Route path="/transporter" element={<Protected roles={['TRANSPORTER']}><TransporterList /></Protected>} />
       <Route path="/transporter/new" element={<Protected roles={['TRANSPORTER']}><NewAppointment /></Protected>} />

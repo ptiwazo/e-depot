@@ -6,6 +6,7 @@ import {
   ContainerRecord,
   ContainerRepository,
 } from '../containers/container.repository';
+import { SettingsService } from '../settings/settings.service';
 
 export interface ManifestRow {
   containerNumber: string;
@@ -19,6 +20,7 @@ export interface ManifestRow {
 export class ManifestService {
   constructor(
     @Inject(CONTAINER_REPOSITORY) private readonly repo: ContainerRepository,
+    private readonly settings: SettingsService,
   ) {}
 
   /** true quand la base est externe (HFSQL) : les écritures sont refusées. */
@@ -71,12 +73,15 @@ export class ManifestService {
       return { found: false, blMatch: false, message: 'Conteneur absent de la base MEDLOG' };
     }
     const blMatch = entry.blNumber === (bl || '').trim().toUpperCase();
+    const { propreMoyen, minHours } = await this.settings.leadHoursFor(entry.transporteur);
     return {
       found: true,
       blMatch,
       containerType: entry.containerType,
       consignee: entry.consignee,
       transporteur: entry.transporteur ?? null,
+      propreMoyen,
+      minLeadHours: minHours,
       message: blMatch ? 'Conteneur et BL vérifiés' : 'Le BL ne correspond pas à ce conteneur',
     };
   }
