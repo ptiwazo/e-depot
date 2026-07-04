@@ -5,6 +5,9 @@ import { Layout } from '../components';
 
 const SIZE_TYPES = ['20DV', '20RF', '20OT', '20FR', '40DV', '40HC', '40HR', '40RF', '40OT', '40FR', '45HC'];
 
+type ImportRow = { containerNumber: string; blNumber: string; containerType: string; consignee: string; transporteur: string };
+const CHUNK = 500; // lignes envoyées par lot (jauge + évite les très gros payloads / requêtes longues)
+
 // Retrouve une colonne quel que soit son intitulé (insensible casse/accents).
 function pick(row: Record<string, any>, keys: string[]): string {
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
@@ -21,6 +24,10 @@ export default function ManifestAdmin() {
   const [single, setSingle] = useState({ containerNumber: '', blNumber: '', containerType: '20DV', consignee: '', transporteur: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [parsed, setParsed] = useState<ImportRow[]>([]); // lignes du fichier, prêtes à valider
+  const [fileName, setFileName] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(0); // % d'avancement de l'import
   const fileRef = useRef<HTMLInputElement>(null);
 
   function load() {
@@ -55,9 +62,9 @@ export default function ManifestAdmin() {
     XLSX.writeFile(wb, 'template_base_conteneurs.xlsx');
   }
 
-  // Import d'un fichier .xlsx.
+  // Étape 1 : lecture du fichier .xlsx (aperçu, PAS d'import — l'import se fait au clic sur Valider).
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    setErr(''); setMsg('');
+    setErr(''); setMsg(''); setParsed([]); setFileName('');
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -65,7 +72,7 @@ export default function ManifestAdmin() {
       const wb = XLSX.read(buf, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
-      const parsed = json
+      const list: ImportRow[] = json
         .map((r) => ({
           containerNumber: pick(r, ['conteneur', 'container', 'container number', 'numero conteneur']),
           blNumber: pick(r, ['bl', 'blnumber', 'bl number', 'connaissement']),
@@ -74,18 +81,50 @@ export default function ManifestAdmin() {
           transporteur: pick(r, ['transporteur', 'transporter', 'carrier']),
         }))
         .filter((r) => r.containerNumber);
-      if (!parsed.length) return setErr('Aucune ligne exploitable dans le fichier (colonnes attendues : Conteneur, BL, Type, Client).');
-      const res = await api<{ imported: number; ignored: number; total: number; errors: string[] }>('/manifest/import', {
-        method: 'POST',
-        body: JSON.stringify({ rows: parsed }),
-      });
-      setMsg(`Import terminé : ${res.imported} importé(s), ${res.ignored} ignoré(s) sur ${res.total}.` + (res.errors.length ? ' ⚠ ' + res.errors.join(' | ') : ''));
-      load();
+      if (!list.length) {
+        setErr('Aucune ligne exploitable dans le fichier (colonnes attendues : Conteneur, BL, Type, Client, Transporteur).');
+        return;
+      }
+      setParsed(list);
+      setFileName(file.name);
+      setMsg(`${list.length} ligne(s) détectée(s) dans « ${file.name} ». Cliquez sur « Valider l'import » pour charger.`);
     } catch (e: any) {
       setErr('Fichier illisible : ' + e.message);
-    } finally {
-      if (fileRef.current) fileRef.current.value = '';
     }
+  }
+
+  // Étape 2 : import réel, par lots, avec jauge de progression.
+  async function runImport() {
+    if (!parsed.length || importing) return;
+    setErr(''); setMsg(''); setImporting(true); setProgress(0);
+    let imported = 0, ignored = 0;
+    const errors: string[] = [];
+    try {
+      for (let i = 0; i < parsed.length; i += CHUNK) {
+        const chunk = parsed.slice(i, i + CHUNK);
+        const res = await api<{ imported: number; ignored: number; total: number; errors: string[] }>('/manifest/import', {
+          method: 'POST',
+          body: JSON.stringify({ rows: chunk }),
+        });
+        imported += res.imported;
+        ignored += res.ignored;
+        if (errors.length < 20 && res.errors?.length) errors.push(...res.errors);
+        setProgress(Math.round(Math.min(i + CHUNK, parsed.length) / parsed.length * 100));
+      }
+      setMsg(`Import terminé : ${imported} importé(s), ${ignored} ignoré(s) sur ${parsed.length}.` + (errors.length ? ' ⚠ ' + errors.slice(0, 20).join(' | ') : ''));
+      setParsed([]); setFileName('');
+      if (fileRef.current) fileRef.current.value = '';
+      load();
+    } catch (e: any) {
+      setErr('Import interrompu : ' + e.message);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function cancelImport() {
+    setParsed([]); setFileName(''); setMsg('');
+    if (fileRef.current) fileRef.current.value = '';
   }
 
   async function remove(id: string, num: string) {
@@ -142,9 +181,37 @@ export default function ManifestAdmin() {
           </p>
           <button type="button" className="btn ghost" onClick={downloadTemplate}>⬇ Télécharger le template Excel</button>
           <div style={{ marginTop: 12 }}>
-            <label>Importer un fichier .xlsx</label>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={onFile} />
+            <label>Choisir un fichier .xlsx</label>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={onFile} disabled={importing} />
           </div>
+
+          {/* Aperçu + bouton Valider (avant import) */}
+          {parsed.length > 0 && !importing && (
+            <div style={{ marginTop: 14 }}>
+              <div className="flex" style={{ gap: 10, flexWrap: 'wrap' }}>
+                <button type="button" className="btn" onClick={runImport}>
+                  ✓ Valider l'import ({parsed.length} ligne{parsed.length > 1 ? 's' : ''})
+                </button>
+                <button type="button" className="btn ghost sm" onClick={cancelImport}>Annuler</button>
+              </div>
+            </div>
+          )}
+
+          {/* Jauge de progression (pendant l'import) */}
+          {importing && (
+            <div style={{ marginTop: 16 }}>
+              <div className="flex between small" style={{ marginBottom: 6 }}>
+                <b>Import en cours…</b>
+                <span className="mono">{progress}%</span>
+              </div>
+              <div className="bar" style={{ height: 14 }}>
+                <span style={{ width: `${progress}%`, transition: 'width .2s' }} />
+              </div>
+              <p className="small muted" style={{ marginTop: 6 }}>
+                Chargement de {parsed.length} conteneur(s)… merci de patienter, ne fermez pas la page.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
