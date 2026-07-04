@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 const stripSlash = (s: string) => s.trim().replace(/\/+$/, '');
@@ -25,7 +26,12 @@ function corsOptions(): CorsOptions {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // bodyParser désactivé ici pour redéfinir la limite (défaut 100 Ko trop bas
+  // pour l'import en masse de la base conteneurs → 413 "request entity too large").
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  const bodyLimit = process.env.BODY_LIMIT || '25mb';
+  app.use(json({ limit: bodyLimit }));
+  app.use(urlencoded({ extended: true, limit: bodyLimit }));
   app.setGlobalPrefix('api');
   app.enableCors(corsOptions());
   app.useGlobalPipes(
