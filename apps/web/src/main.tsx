@@ -5,9 +5,12 @@ import './styles.css';
 import { AuthProvider } from './auth';
 import App from './App';
 
+// Aligne le routeur sur la base Vite : '/e-depot/' en prod → basename '/e-depot' ; '/' en dev → ''.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <AuthProvider>
         <App />
       </AuthProvider>

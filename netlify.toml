@@ -10,8 +10,23 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA : toutes les routes servent index.html (React Router).
+# Le front est buildé avec base=/e-depot/ (servi sous ce sous-chemin, y compris
+# derrière le proxy IIS ci-apps.medlog.com/e-depot). On mappe donc /e-depot/* :
+
+# 1) les assets hashés → fichiers réels à la racine du publish
 [[redirects]]
-  from = "/*"
+  from = "/e-depot/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+# 2) SPA : toute autre route sous /e-depot sert index.html (React Router, basename /e-depot)
+[[redirects]]
+  from = "/e-depot/*"
   to = "/index.html"
   status = 200
+
+# 3) confort : la racine renvoie vers /e-depot/
+[[redirects]]
+  from = "/"
+  to = "/e-depot/"
+  status = 301

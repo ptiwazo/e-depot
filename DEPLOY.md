@@ -82,6 +82,31 @@ Redéployer l'API. Le front peut alors appeler l'API (origine autorisée).
 
 ---
 
+## 5. Exposer sous http://ci-apps.medlog.com/e-depot (IIS reverse proxy)
+
+Le front est buildé avec **base `/e-depot/`** (voir `vite.config.ts` + `basename` du
+routeur) et Netlify le sert sous ce sous-chemin (redirections dans `netlify.toml`).
+Un serveur **IIS** proxifie ce sous-chemin vers Netlify ; l'API reste appelée
+directement sur Render.
+
+1. Sur le serveur IIS (`ci-apps.medlog.com`), installer **URL Rewrite** + **ARR**,
+   puis activer le proxy (IIS Manager → serveur → *Application Request Routing Cache*
+   → *Server Proxy Settings* → *Enable proxy*).
+2. Déposer `deploy/iis/web.config` à la racine du site (règle : `/e-depot/*` →
+   `https://e-depot.netlify.app/e-depot/*`, préfixe conservé).
+3. Sur **Render** → `e-depot-api` → **Environment**, autoriser la nouvelle origine
+   (liste séparée par des virgules, sans slash final) :
+   ```
+   CORS_ORIGIN = http://ci-apps.medlog.com,https://e-depot.netlify.app
+   ```
+   (le code CORS gère la liste ; `*` seul autorise tout.)
+4. Vérifier : `http://ci-apps.medlog.com/e-depot` affiche l'app, le login fonctionne.
+
+> Page http + API https : pas de blocage *mixed content* (une page http PEUT appeler
+> une API https). Si `ci-apps.medlog.com` passe un jour en https, rien à changer.
+
+---
+
 ## Développement local (Postgres requis)
 
 L'app n'utilise plus SQLite. En local, il faut un PostgreSQL (Docker, installation
