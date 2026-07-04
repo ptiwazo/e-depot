@@ -25,8 +25,9 @@
   to = "/index.html"
   status = 200
 
-# 3) confort : la racine renvoie vers /e-depot/
+# 3) confort : la racine redirige vers /e-depot/ (force = passe avant le fichier statique)
 [[redirects]]
   from = "/"
   to = "/e-depot/"
   status = 301
+  force = true
