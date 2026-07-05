@@ -183,6 +183,15 @@ export function Layout({ children, title }: { children: ReactNode; title: string
           </NavLink>
         ))}
         <div className="spacer" />
+        <a
+          className="nav-link help-link"
+          href={`${import.meta.env.BASE_URL}mode-emploi-e-depot.pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="nav-ico"><Icon name="report" /></span>
+          <span>Mode d'emploi</span>
+        </a>
         <div className="userbox">
           <b>{user.name}</b>
           {user.company || user.offDock || ROLE_LABEL[user.role]}
