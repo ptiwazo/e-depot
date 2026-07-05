@@ -58,6 +58,20 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Utilisateur introuvable.');
     if (dto.role && !VALID_ROLES.includes(dto.role)) throw new BadRequestException('Rôle invalide.');
+    // Garde-fou : ne jamais laisser 0 administrateur actif (évite de se verrouiller dehors).
+    const willBeAdmin = (dto.role ?? user.role) === 'ADMIN';
+    const willBeActive = dto.active ?? user.active;
+    const losesAdmin = user.role === 'ADMIN' && user.active && (!willBeAdmin || !willBeActive);
+    if (losesAdmin) {
+      const otherActiveAdmins = await this.prisma.user.count({
+        where: { role: 'ADMIN', active: true, id: { not: id } },
+      });
+      if (otherActiveAdmins === 0) {
+        throw new BadRequestException(
+          'Action impossible : ce compte est le dernier administrateur actif. Créez/activez un autre admin d’abord.',
+        );
+      }
+    }
     // Valide avec les valeurs effectives : on ne réclame pas la société si on ne modifie que le statut.
     const effCompany = dto.companyId !== undefined ? dto.companyId : user.companyId;
     const effOffDock = dto.offDockId !== undefined ? dto.offDockId : user.offDockId;
