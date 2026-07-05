@@ -41,6 +41,7 @@ export default function Login() {
       </div>
       <div className="login-form-side">
         <form className="login-form" onSubmit={submit}>
+          <div style={{ marginBottom: 18 }}><BrandLogo height={34} chip={false} /></div>
           <h1>Connexion</h1>
           {error && <div className="alert error">{error}</div>}
           <div className="field">

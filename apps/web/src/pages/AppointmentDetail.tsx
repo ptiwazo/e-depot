@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { api, Appointment } from '../api';
 import { useAuth } from '../auth';
-import { Layout, Badge, fmtShift, fmtSlot } from '../components';
+import { Layout, Badge, fmtShift, fmtSlot, Loader } from '../components';
 
 export default function AppointmentDetail() {
   const { id } = useParams();
@@ -85,7 +85,7 @@ export default function AppointmentDetail() {
     <Layout title="Détail du rendez-vous">
       {error && <div className="alert error">{error}</div>}
       {!appt ? (
-        <div className="muted">Chargement…</div>
+        <div className="page-center"><Loader /></div>
       ) : (
         <div className="grid cols-2">
           <div className="card pad-lg">

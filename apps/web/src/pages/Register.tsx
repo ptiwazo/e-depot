@@ -43,6 +43,7 @@ export default function Register() {
       </div>
       <div className="login-form-side">
         <form className="login-form" onSubmit={submit}>
+          <div style={{ marginBottom: 16 }}><BrandLogo height={30} chip={false} /></div>
           <h1>Inscription transporteur</h1>
           {msg && <div className="alert ok">{msg} <br /><Link to="/login">→ Aller à la connexion</Link></div>}
           {err && <div className="alert error">{err}</div>}

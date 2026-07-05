@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, Analytics } from '../api';
-import { Layout, Kpi, OccupancyBar } from '../components';
+import { Layout, Kpi, OccupancyBar, Loader } from '../components';
 
 export default function MscDashboard() {
   const [data, setData] = useState<Analytics | null>(null);
@@ -12,7 +12,7 @@ export default function MscDashboard() {
   return (
     <Layout title="Supervision MSC — retours conteneurs vides">
       {!data ? (
-        <div className="muted">Chargement…</div>
+        <div className="page-center"><Loader /></div>
       ) : (
         <>
           <div className="alert info">Vue lecture seule — suivi des retours de conteneurs vides MSC sur le réseau OFF-DOCK MEDLOG CI.</div>

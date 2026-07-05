@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
+import { Loader } from './components';
 import Login from './pages/Login';
 import Intro from './pages/Intro';
 import Register from './pages/Register';
@@ -30,7 +31,7 @@ const HOME: Record<string, string> = {
 
 function Protected({ children, roles }: { children: JSX.Element; roles?: string[] }) {
   const { user, loading } = useAuth();
-  if (loading) return <div style={{ padding: 40 }} className="muted">Chargement…</div>;
+  if (loading) return <div className="page-center"><Loader /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to={HOME[user.role] ?? '/login'} replace />;
   return children;
@@ -48,7 +49,7 @@ export default function App() {
       <Route
         path="/"
         element={
-          loading ? <div style={{ padding: 40 }} className="muted">Chargement…</div>
+          loading ? <div className="page-center"><Loader /></div>
           : user ? <Navigate to={HOME[user.role] ?? '/login'} replace />
           : <Intro />
         }

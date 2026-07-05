@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Layout } from '../components';
+import { Layout, Loader } from '../components';
 
 type Settings = {
   lead_hours_propre_moyen: string;
@@ -33,7 +33,7 @@ export default function SettingsAdmin() {
     }
   }
 
-  if (!s) return <Layout title="Paramètres"><div className="muted">Chargement…</div></Layout>;
+  if (!s) return <Layout title="Paramètres"><div className="page-center"><Loader /></div></Layout>;
 
   return (
     <Layout title="Paramètres — délais de préavis">

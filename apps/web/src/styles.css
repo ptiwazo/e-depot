@@ -268,12 +268,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--y
 .between { justify-content: space-between; }
 .stack { display: flex; flex-direction: column; gap: 4px; }
 
-/* Spinner utilitaire */
+/* Spinner utilitaire (fallback) */
 .spinner {
   display: inline-block; width: 16px; height: 16px; vertical-align: -3px;
   border: 2px solid rgba(34, 34, 33, 0.2); border-top-color: var(--black);
   border-radius: 50%; animation: spin 0.7s linear infinite;
 }
+
+/* Loader thématique : camion MEDLOG qui roule */
+.loader { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px; width: 100%; }
+.loader-truck { overflow: visible; }
+.loader .truck { animation: truckBob 0.55s ease-in-out infinite; }
+@keyframes truckBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.6px); } }
+.loader .wheel { transform-box: view-box; animation: spin 0.65s linear infinite; }
+.loader .road { stroke: var(--grey-300); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 10 12; animation: roadmove 0.5s linear infinite; }
+@keyframes roadmove { to { stroke-dashoffset: -22; } }
+.loader-label { font-size: 12px; color: var(--grey); letter-spacing: 0.05em; }
+.page-center { min-height: 70vh; display: flex; align-items: center; justify-content: center; }
 
 /* --- Login / pages publiques --- */
 .login-wrap { display: flex; min-height: 100vh; }

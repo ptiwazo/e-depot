@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, Analytics } from '../api';
-import { Layout, Kpi, OccupancyBar, HeroBand } from '../components';
+import { Layout, Kpi, OccupancyBar, HeroBand, Loader } from '../components';
 
 export default function AdminDashboard() {
   const [data, setData] = useState<Analytics | null>(null);
@@ -14,7 +14,7 @@ export default function AdminDashboard() {
     <Layout title="Tableau de bord national">
       {err && <div className="alert error">{err}</div>}
       {!data ? (
-        <div className="muted">Chargement…</div>
+        <div className="page-center"><Loader /></div>
       ) : (
         <>
           <HeroBand

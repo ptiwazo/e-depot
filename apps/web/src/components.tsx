@@ -122,18 +122,45 @@ export function Logo({ light }: { light?: boolean }) {
 }
 
 // Logo officiel MEDLOG (image dans public/medlog-logo.png), avec repli sur le logo texte.
-export function BrandLogo({ height = 34, light }: { height?: number; light?: boolean }) {
+// chip=false : logo nu (fond clair) ; chip=true : pastille blanche (fond sombre).
+export function BrandLogo({ height = 34, light, chip = true }: { height?: number; light?: boolean; chip?: boolean }) {
   const [ok, setOk] = useState(true);
   if (!ok) return <Logo light={light} />;
+  const img = (
+    <img
+      src={`${import.meta.env.BASE_URL}medlog-logo.png`}
+      alt="MEDLOG"
+      style={{ height, width: 'auto', maxWidth: '100%', display: 'block' }}
+      onError={() => setOk(false)}
+    />
+  );
+  return chip ? <span className="logo-chip">{img}</span> : img;
+}
+
+// Loader thématique : petit camion MEDLOG qui roule (remplace le spinner).
+export function Loader({ label = 'Chargement…', size = 120 }: { label?: string; size?: number }) {
   return (
-    <span className="logo-chip">
-      <img
-        src={`${import.meta.env.BASE_URL}medlog-logo.png`}
-        alt="MEDLOG"
-        style={{ height, width: 'auto', maxWidth: '100%', display: 'block' }}
-        onError={() => setOk(false)}
-      />
-    </span>
+    <div className="loader" role="status" aria-label={label}>
+      <svg className="loader-truck" viewBox="0 0 130 74" width={size} height={(size * 74) / 130} aria-hidden="true">
+        {/* route */}
+        <line className="road" x1="0" y1="66" x2="130" y2="66" />
+        <g className="truck">
+          {/* remorque + conteneur */}
+          <rect x="4" y="20" width="70" height="30" rx="2" fill="#222221" />
+          <rect x="7" y="23" width="64" height="24" rx="1" fill="#eed484" />
+          <text x="39" y="40" textAnchor="middle" fontFamily="Arial Black, Arial" fontSize="11" fill="#222221">MSC</text>
+          {/* cabine */}
+          <path d="M76 28 h18 l12 12 v10 h-30 z" fill="#eed484" />
+          <path d="M79 30 h13 l8 9 h-21 z" fill="#0b2233" opacity="0.85" />
+          <rect x="102" y="46" width="6" height="4" fill="#ae1400" />
+        </g>
+        {/* roues */}
+        <g className="wheel" style={{ transformOrigin: '22px 56px' }}><circle cx="22" cy="56" r="8" fill="#222221" /><circle cx="22" cy="56" r="3" fill="#8b8178" /><line x1="22" y1="49" x2="22" y2="63" stroke="#8b8178" strokeWidth="1.4" /><line x1="15" y1="56" x2="29" y2="56" stroke="#8b8178" strokeWidth="1.4" /></g>
+        <g className="wheel" style={{ transformOrigin: '52px 56px' }}><circle cx="52" cy="56" r="8" fill="#222221" /><circle cx="52" cy="56" r="3" fill="#8b8178" /><line x1="52" y1="49" x2="52" y2="63" stroke="#8b8178" strokeWidth="1.4" /><line x1="45" y1="56" x2="59" y2="56" stroke="#8b8178" strokeWidth="1.4" /></g>
+        <g className="wheel" style={{ transformOrigin: '96px 56px' }}><circle cx="96" cy="56" r="8" fill="#222221" /><circle cx="96" cy="56" r="3" fill="#8b8178" /><line x1="96" y1="49" x2="96" y2="63" stroke="#8b8178" strokeWidth="1.4" /><line x1="89" y1="56" x2="103" y2="56" stroke="#8b8178" strokeWidth="1.4" /></g>
+      </svg>
+      {label && <div className="loader-label">{label}</div>}
+    </div>
   );
 }
 
