@@ -8,6 +8,7 @@ import Activate from './pages/Activate';
 import UsersAdmin from './pages/UsersAdmin';
 import CompaniesAdmin from './pages/CompaniesAdmin';
 import AuditAdmin from './pages/AuditAdmin';
+import ReportsAdmin from './pages/ReportsAdmin';
 import AdminDashboard from './pages/AdminDashboard';
 import OffDocks from './pages/OffDocks';
 import ShiftsAdmin from './pages/ShiftsAdmin';
@@ -63,6 +64,7 @@ export default function App() {
       <Route path="/admin/users" element={<Protected roles={['ADMIN']}><UsersAdmin /></Protected>} />
       <Route path="/admin/companies" element={<Protected roles={['ADMIN']}><CompaniesAdmin /></Protected>} />
       <Route path="/admin/audit" element={<Protected roles={['ADMIN']}><AuditAdmin /></Protected>} />
+      <Route path="/admin/reports" element={<Protected roles={['ADMIN']}><ReportsAdmin /></Protected>} />
 
       <Route path="/transporter" element={<Protected roles={['TRANSPORTER']}><TransporterList /></Protected>} />
       <Route path="/transporter/new" element={<Protected roles={['TRANSPORTER']}><NewAppointment /></Protected>} />

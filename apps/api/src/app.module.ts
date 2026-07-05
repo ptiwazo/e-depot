@@ -13,6 +13,7 @@ import { ShiftsModule } from './shifts/shifts.module';
 import { ManifestModule } from './manifest/manifest.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
+import { ReportsModule } from './reports/reports.module';
 
 @Controller()
 class HealthController {
@@ -36,6 +37,7 @@ class HealthController {
     ShiftsModule,
     ManifestModule,
     AuditModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],

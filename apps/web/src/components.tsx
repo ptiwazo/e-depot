@@ -52,6 +52,7 @@ const NAV: Record<string, { to: string; label: string }[]> = {
     { to: '/admin/users', label: 'Utilisateurs' },
     { to: '/admin/companies', label: 'Sociétés' },
     { to: '/admin/audit', label: 'Audit' },
+    { to: '/admin/reports', label: 'Rapports' },
     { to: '/admin/settings', label: 'Paramètres' },
     { to: '/agent', label: "File d'affectation" },
     { to: '/appointments', label: 'Rendez-vous' },
@@ -87,6 +88,7 @@ const ICONS: Record<string, ReactNode> = {
   plus: (<><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>),
   chart: (<><path d="M4 4v16h16" /><path d="M7.5 15l3-4 3 2 4-6" /></>),
   audit: (<><rect x="4" y="3" width="16" height="18" rx="1.5" /><path d="M8 8h8M8 12h8M8 16h5" /></>),
+  report: (<><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /><path d="M9 13v4M12 11v6M15 14v3" /></>),
 };
 
 export function Icon({ name, size = 18 }: { name: string; size?: number }) {
@@ -105,7 +107,7 @@ const NAV_ICON: Record<string, string> = {
   '/admin': 'dashboard', '/admin/offdocks': 'offdock', '/admin/shifts': 'clock',
   '/admin/manifest': 'container', '/admin/users': 'users', '/admin/companies': 'building',
   '/admin/settings': 'settings', '/agent': 'target', '/appointments': 'calendar',
-  '/admin/audit': 'audit', '/operator': 'monitor', '/transporter': 'calendar', '/transporter/new': 'plus', '/msc': 'chart',
+  '/admin/audit': 'audit', '/admin/reports': 'report', '/operator': 'monitor', '/transporter': 'calendar', '/transporter/new': 'plus', '/msc': 'chart',
 };
 
 // Logo texte (repli si l'image n'est pas disponible).
