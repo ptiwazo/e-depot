@@ -19,10 +19,18 @@
   to = "/assets/:splat"
   status = 200
 
-# 1bis) fichiers statiques du dossier public (logo…) servis sous /e-depot
+# 1bis) fichiers statiques du dossier public (logo, photos hero…) servis sous /e-depot
 [[redirects]]
   from = "/e-depot/medlog-logo.png"
   to = "/medlog-logo.png"
+  status = 200
+[[redirects]]
+  from = "/e-depot/hero-port.jpg"
+  to = "/hero-port.jpg"
+  status = 200
+[[redirects]]
+  from = "/e-depot/hero-yard.jpg"
+  to = "/hero-yard.jpg"
   status = 200
 
 # 2) SPA : toute autre route sous /e-depot sert index.html (React Router, basename /e-depot)
