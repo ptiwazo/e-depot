@@ -39,6 +39,14 @@ const NAV: Record<string, { to: string; label: string }[]> = {
   MSC: [{ to: '/msc', label: 'Supervision' }],
 };
 
+// Icônes de navigation (par route).
+const NAV_ICON: Record<string, string> = {
+  '/admin': '📊', '/admin/offdocks': '🏭', '/admin/shifts': '🕐', '/admin/manifest': '📦',
+  '/admin/users': '👤', '/admin/companies': '🏢', '/admin/settings': '⚙️',
+  '/agent': '🎯', '/appointments': '📅', '/operator': '🖥️',
+  '/transporter': '📅', '/transporter/new': '➕', '/msc': '📈',
+};
+
 // Logo texte (repli si l'image n'est pas disponible).
 export function Logo({ light }: { light?: boolean }) {
   return (
@@ -80,7 +88,8 @@ export function Layout({ children, title }: { children: ReactNode; title: string
         <BrandLogo light />
         {links.map((l) => (
           <NavLink key={l.to} to={l.to} end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-            {l.label}
+            <span className="nav-ico">{NAV_ICON[l.to] ?? '•'}</span>
+            <span>{l.label}</span>
           </NavLink>
         ))}
         <div className="spacer" />
