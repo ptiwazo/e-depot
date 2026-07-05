@@ -8,12 +8,20 @@ const SIZE_TYPES = ['20DV', '20RF', '20OT', '20FR', '40DV', '40HC', '40HR', '40R
 type ImportRow = { containerNumber: string; blNumber: string; containerType: string; consignee: string; transporteur: string };
 const CHUNK = 500; // lignes envoyées par lot (jauge + évite les très gros payloads / requêtes longues)
 
-// Retrouve une colonne quel que soit son intitulé (insensible casse/accents).
-function pick(row: Record<string, any>, keys: string[]): string {
-  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+// Retrouve une colonne quel que soit son intitulé (insensible casse/accents/ponctuation).
+// partial=true : accepte aussi un intitulé qui CONTIENT le mot-clé (ex. « Nom du transporteur »).
+function pick(row: Record<string, any>, keys: string[], partial = false): string {
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '');
   const wanted = keys.map(norm);
-  for (const k of Object.keys(row)) {
-    if (wanted.includes(norm(k))) return String(row[k] ?? '').trim();
+  const cols = Object.keys(row);
+  // 1) correspondance exacte
+  for (const k of cols) if (wanted.includes(norm(k))) return String(row[k] ?? '').trim();
+  // 2) repli : l'intitulé contient un mot-clé (mot-clé d'au moins 4 lettres pour éviter les faux positifs)
+  if (partial) {
+    for (const k of cols) {
+      const nk = norm(k);
+      if (wanted.some((w) => w.length >= 4 && nk.includes(w))) return String(row[k] ?? '').trim();
+    }
   }
   return '';
 }
@@ -78,16 +86,22 @@ export default function ManifestAdmin() {
           blNumber: pick(r, ['bl', 'blnumber', 'bl number', 'connaissement']),
           containerType: pick(r, ['type', 'sizetype', 'taille type', 'type taille']) || '20DV',
           consignee: pick(r, ['client', 'consignee', 'destinataire']),
-          transporteur: pick(r, ['transporteur', 'transporter', 'carrier']),
+          transporteur: pick(r, ['transporteur', 'transporter', 'carrier', 'transitaire'], true),
         }))
         .filter((r) => r.containerNumber);
       if (!list.length) {
         setErr('Aucune ligne exploitable dans le fichier (colonnes attendues : Conteneur, BL, Type, Client, Transporteur).');
         return;
       }
+      const withT = list.filter((r) => r.transporteur).length;
       setParsed(list);
       setFileName(file.name);
-      setMsg(`${list.length} ligne(s) détectée(s) dans « ${file.name} ». Cliquez sur « Valider l'import » pour charger.`);
+      let m = `${list.length} ligne(s) détectée(s) dans « ${file.name} » — ${withT} avec transporteur.`;
+      if (withT === 0) {
+        m += ` ⚠ Colonne « transporteur » non reconnue. Colonnes trouvées dans le fichier : ${Object.keys(json[0] || {}).join(' · ')}.`;
+      }
+      m += ` Cliquez sur « Valider l'import » pour charger.`;
+      setMsg(m);
     } catch (e: any) {
       setErr('Fichier illisible : ' + e.message);
     }
