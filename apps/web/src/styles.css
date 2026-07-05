@@ -140,6 +140,7 @@ th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--gr
 th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--grey); }
 tr:hover td { background: var(--grey-100); }
 .mono { font-family: "Courier New", monospace; font-weight: bold; }
+.filter-in { padding: 5px 8px; font-size: 12px; font-weight: normal; text-transform: none; letter-spacing: normal; color: var(--black); }
 
 /* --- Badges (statuts) --- */
 .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.03em; }

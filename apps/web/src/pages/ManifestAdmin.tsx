@@ -28,7 +28,8 @@ function pick(row: Record<string, any>, keys: string[], partial = false): string
 
 export default function ManifestAdmin() {
   const [rows, setRows] = useState<ContainerManifest[]>([]);
-  const [search, setSearch] = useState('');
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState({ container: '', bl: '', type: '', client: '', transporteur: '' });
   const [single, setSingle] = useState({ containerNumber: '', blNumber: '', containerType: '20DV', consignee: '', transporteur: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -39,10 +40,28 @@ export default function ManifestAdmin() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   function load() {
-    const q = search ? `?search=${encodeURIComponent(search)}` : '';
-    api<ContainerManifest[]>(`/manifest${q}`).then(setRows);
+    const qs = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => { if (v.trim()) qs.set(k, v.trim()); });
+    const q = qs.toString();
+    api<ContainerManifest[]>(`/manifest${q ? '?' + q : ''}`).then(setRows);
+    api<{ count: number }>('/manifest/count').then((d) => setTotal(d.count));
   }
-  useEffect(load, [search]);
+  // Rechargement (debounce) à chaque changement de filtre.
+  useEffect(() => {
+    const t = setTimeout(load, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  async function clearBase() {
+    if (!confirm('Supprimer TOUS les conteneurs de la base ? Action irréversible.')) return;
+    setErr(''); setMsg('');
+    try {
+      const res = await api<{ deleted: number }>('/manifest', { method: 'DELETE' });
+      setMsg(`Base vidée : ${res.deleted} conteneur(s) supprimé(s).`);
+      load();
+    } catch (e: any) { setErr(e.message); }
+  }
 
   async function addOne(e: React.FormEvent) {
     e.preventDefault();
@@ -230,13 +249,32 @@ export default function ManifestAdmin() {
       </div>
 
       <div className="card">
-        <div className="flex between" style={{ marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>{rows.length} conteneur(s) dans la base</h2>
-          <input style={{ width: 260 }} placeholder="Rechercher conteneur / BL…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex between" style={{ marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <h2 style={{ margin: 0 }}>
+            {rows.length} affiché(s){rows.length >= 500 ? ' (max 500 — affinez les filtres)' : ''} · {total} au total
+          </h2>
+          <div className="flex" style={{ gap: 8 }}>
+            {Object.values(filters).some((v) => v) && (
+              <button className="btn ghost sm" onClick={() => setFilters({ container: '', bl: '', type: '', client: '', transporteur: '' })}>
+                Réinitialiser
+              </button>
+            )}
+            <button className="btn danger sm" onClick={clearBase} disabled={!total}>🗑 Vider la base</button>
+          </div>
         </div>
         <table>
           <thead>
             <tr><th>Conteneur</th><th>BL</th><th>Type</th><th>Ligne</th><th>Client</th><th>Transporteur</th><th></th></tr>
+            <tr>
+              {(['container', 'bl', 'type'] as const).map((k) => (
+                <th key={k}><input className="filter-in" placeholder="filtrer…" value={filters[k]} onChange={(e) => setFilters({ ...filters, [k]: e.target.value })} /></th>
+              ))}
+              <th />
+              {(['client', 'transporteur'] as const).map((k) => (
+                <th key={k}><input className="filter-in" placeholder="filtrer…" value={filters[k]} onChange={(e) => setFilters({ ...filters, [k]: e.target.value })} /></th>
+              ))}
+              <th />
+            </tr>
           </thead>
           <tbody>
             {rows.map((r) => (

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ContainerRecord, ContainerRepository } from './container.repository';
+import { ContainerFilter, ContainerRecord, ContainerRepository } from './container.repository';
 
 /** Source par défaut : table ContainerManifest (SQLite/Prisma), en écriture. */
 @Injectable()
@@ -14,15 +14,19 @@ export class PrismaContainerRepository implements ContainerRepository {
     return e ? this.map(e) : null;
   }
 
-  async list(search?: string): Promise<ContainerRecord[]> {
-    const where = search
-      ? {
-          OR: [
-            { containerNumber: { contains: search.toUpperCase() } },
-            { blNumber: { contains: search.toUpperCase() } },
-          ],
-        }
-      : {};
+  async list(filters?: ContainerFilter): Promise<ContainerRecord[]> {
+    const f = filters ?? {};
+    const and: any[] = [];
+    if (f.search) {
+      const s = f.search.toUpperCase();
+      and.push({ OR: [{ containerNumber: { contains: s } }, { blNumber: { contains: s } }] });
+    }
+    if (f.container) and.push({ containerNumber: { contains: f.container.toUpperCase() } });
+    if (f.bl) and.push({ blNumber: { contains: f.bl.toUpperCase() } });
+    if (f.type) and.push({ containerType: { contains: f.type.toUpperCase() } });
+    if (f.client) and.push({ consignee: { contains: f.client, mode: 'insensitive' } });
+    if (f.transporteur) and.push({ transporteur: { contains: f.transporteur, mode: 'insensitive' } });
+    const where = and.length ? { AND: and } : {};
     const rows = await this.prisma.containerManifest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -53,6 +57,11 @@ export class PrismaContainerRepository implements ContainerRepository {
 
   async remove(id: string): Promise<void> {
     await this.prisma.containerManifest.delete({ where: { id } });
+  }
+
+  async clear(): Promise<number> {
+    const res = await this.prisma.containerManifest.deleteMany();
+    return res.count;
   }
 
   private map(e: {

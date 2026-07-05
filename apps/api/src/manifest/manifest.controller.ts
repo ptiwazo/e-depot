@@ -31,8 +31,15 @@ export class ManifestController {
 
   @Roles('ADMIN')
   @Get()
-  list(@Query('search') search?: string) {
-    return this.service.list(search);
+  list(
+    @Query('search') search?: string,
+    @Query('container') container?: string,
+    @Query('bl') bl?: string,
+    @Query('type') type?: string,
+    @Query('client') client?: string,
+    @Query('transporteur') transporteur?: string,
+  ) {
+    return this.service.list({ search, container, bl, type, client, transporteur });
   }
 
   @Roles('ADMIN')
@@ -51,6 +58,13 @@ export class ManifestController {
   @Post('import')
   import(@Body() dto: ImportDto) {
     return this.service.import(dto.rows);
+  }
+
+  // Vider entièrement la base des conteneurs.
+  @Roles('ADMIN')
+  @Delete()
+  clear() {
+    return this.service.clear();
   }
 
   @Roles('ADMIN')

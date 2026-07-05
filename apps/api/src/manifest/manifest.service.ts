@@ -3,6 +3,7 @@ import { validateContainer } from '../domain/container';
 import { isValidSizeType, normalizeSizeType } from '../domain/sizetype';
 import {
   CONTAINER_REPOSITORY,
+  ContainerFilter,
   ContainerRecord,
   ContainerRepository,
 } from '../containers/container.repository';
@@ -28,12 +29,19 @@ export class ManifestService {
     return this.repo.readOnly;
   }
 
-  list(search?: string) {
-    return this.repo.list(search);
+  list(filters?: ContainerFilter) {
+    return this.repo.list(filters);
   }
 
   count() {
     return this.repo.count();
+  }
+
+  /** Vide entièrement la base des conteneurs. */
+  async clear() {
+    this.assertWritable();
+    const deleted = await this.repo.clear();
+    return { deleted };
   }
 
   addOne(row: ManifestRow) {
