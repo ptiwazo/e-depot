@@ -47,7 +47,9 @@ export default function Activate() {
       </div>
       <div className="login-form-side">
         <form className="login-form" onSubmit={submit}>
-          <div style={{ marginBottom: 16 }}><BrandLogo height={30} chip={false} /></div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+            <BrandLogo height={52} chip={false} />
+          </div>
           <h1>Activer mon compte</h1>
           {checking && <div className="muted">Vérification du lien…</div>}
           {err && <div className="alert error">{err}</div>}
