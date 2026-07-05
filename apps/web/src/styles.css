@@ -60,6 +60,8 @@ a { color: var(--blue); text-decoration: none; }
   border-radius: 4px;
 }
 .logo .sub { font-family: var(--font); font-size: 10px; letter-spacing: 0.18em; color: var(--grey); text-transform: uppercase; }
+/* Pastille blanche autour du logo image (visible sur fond clair comme sur fond noir). */
+.logo-chip { display: inline-block; background: #fff; padding: 6px 10px; border-radius: 8px; line-height: 0; }
 
 /* --- Layout --- */
 .app { display: flex; min-height: 100vh; }

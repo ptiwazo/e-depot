@@ -1,20 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
-
-const DEMO = [
-  { email: 'admin@medlog.ci', label: 'Administrateur MEDLOG' },
-  { email: 'agent@medlog.ci', label: 'Agent MEDLOG (affectations)' },
-  { email: 'operateur.vridi@medlog.ci', label: 'Opérateur OFF-DOCK Vridi' },
-  { email: 'transporteur@ivoiretrans.ci', label: 'Transporteur (Ivoire Trans)' },
-  { email: 'msc@msc.com', label: 'MSC — supervision' },
-];
+import { BrandLogo } from '../components';
 
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('EDepot2026!');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -35,6 +28,7 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <div className="login-brand">
+        <div style={{ marginBottom: 24 }}><BrandLogo height={44} /></div>
         <div className="tag">TRANSPORT &amp; LOGISTICS</div>
         <div className="big">
           e-<span>depot</span>
@@ -60,20 +54,8 @@ export default function Login() {
           <button className="btn" style={{ width: '100%' }} disabled={busy}>
             {busy ? 'Connexion…' : 'Se connecter'}
           </button>
-          <div className="small" style={{ marginTop: 10, textAlign: 'center' }}>
+          <div className="small" style={{ marginTop: 12, textAlign: 'center' }}>
             Transporteur ? <Link to="/register">Créer un compte</Link>
-          </div>
-
-          <div className="demo-accounts">
-            <div className="muted small" style={{ marginBottom: 6 }}>Comptes de démonstration :</div>
-            {DEMO.map((d) => (
-              <button type="button" key={d.email} onClick={() => setEmail(d.email)}>
-                <b>{d.label}</b>
-                <br />
-                <span className="muted">{d.email}</span>
-              </button>
-            ))}
-            <div className="muted small">Mot de passe commun : EDepot2026!</div>
           </div>
         </form>
       </div>

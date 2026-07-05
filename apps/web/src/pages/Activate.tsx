@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { BrandLogo } from '../components';
 
 export default function Activate() {
   const [params] = useSearchParams();
@@ -37,6 +38,7 @@ export default function Activate() {
   return (
     <div className="login-wrap">
       <div className="login-brand">
+        <div style={{ marginBottom: 24 }}><BrandLogo height={44} /></div>
         <div className="tag">TRANSPORT &amp; LOGISTICS</div>
         <div className="big">e-<span>depot</span></div>
         <p style={{ maxWidth: 420, marginTop: 20, color: '#cfcbc4' }}>

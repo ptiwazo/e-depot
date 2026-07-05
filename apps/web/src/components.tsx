@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth';
 
@@ -39,6 +39,7 @@ const NAV: Record<string, { to: string; label: string }[]> = {
   MSC: [{ to: '/msc', label: 'Supervision' }],
 };
 
+// Logo texte (repli si l'image n'est pas disponible).
 export function Logo({ light }: { light?: boolean }) {
   return (
     <div className="logo" style={light ? { color: '#fff' } : undefined}>
@@ -51,6 +52,22 @@ export function Logo({ light }: { light?: boolean }) {
   );
 }
 
+// Logo officiel MEDLOG (image dans public/medlog-logo.png), avec repli sur le logo texte.
+export function BrandLogo({ height = 34, light }: { height?: number; light?: boolean }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) return <Logo light={light} />;
+  return (
+    <span className="logo-chip">
+      <img
+        src={`${import.meta.env.BASE_URL}medlog-logo.png`}
+        alt="MEDLOG"
+        style={{ height, width: 'auto', maxWidth: '100%', display: 'block' }}
+        onError={() => setOk(false)}
+      />
+    </span>
+  );
+}
+
 export function Layout({ children, title }: { children: ReactNode; title: string }) {
   const { user, logout } = useAuth();
   const nav = useNavigate();
@@ -60,7 +77,7 @@ export function Layout({ children, title }: { children: ReactNode; title: string
   return (
     <div className="app">
       <aside className="sidebar">
-        <Logo light />
+        <BrandLogo light />
         {links.map((l) => (
           <NavLink key={l.to} to={l.to} end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
             {l.label}
