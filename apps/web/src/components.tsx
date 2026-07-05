@@ -1,6 +1,38 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from './auth';
+
+// Compteur animé : anime la partie numérique d'une valeur ("42 min", "5%", 21304…).
+function useCountUp(value: ReactNode): ReactNode {
+  const [out, setOut] = useState<ReactNode>(value);
+  useEffect(() => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let prefix = '', suffix = '', target = NaN, decimals = 0;
+    if (typeof value === 'number') target = value;
+    else if (typeof value === 'string') {
+      const m = value.match(/^(\D*?)([\d.,]+)(.*)$/);
+      if (m) {
+        prefix = m[1]; suffix = m[3];
+        const raw = m[2].replace(',', '.');
+        target = parseFloat(raw);
+        decimals = (raw.split('.')[1] || '').length;
+      }
+    }
+    if (!isFinite(target)) { setOut(value); return; }
+    const fmt = (n: number) => `${prefix}${n.toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${suffix}`;
+    if (reduce) { setOut(fmt(target)); return; }
+    const dur = 950, start = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / dur);
+      setOut(fmt(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick); else setOut(fmt(target));
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return out;
+}
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Administrateur',
@@ -19,6 +51,7 @@ const NAV: Record<string, { to: string; label: string }[]> = {
     { to: '/admin/manifest', label: 'Base conteneurs' },
     { to: '/admin/users', label: 'Utilisateurs' },
     { to: '/admin/companies', label: 'Sociétés' },
+    { to: '/admin/audit', label: 'Audit' },
     { to: '/admin/settings', label: 'Paramètres' },
     { to: '/agent', label: "File d'affectation" },
     { to: '/appointments', label: 'Rendez-vous' },
@@ -53,6 +86,7 @@ const ICONS: Record<string, ReactNode> = {
   monitor: (<><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></>),
   plus: (<><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>),
   chart: (<><path d="M4 4v16h16" /><path d="M7.5 15l3-4 3 2 4-6" /></>),
+  audit: (<><rect x="4" y="3" width="16" height="18" rx="1.5" /><path d="M8 8h8M8 12h8M8 16h5" /></>),
 };
 
 export function Icon({ name, size = 18 }: { name: string; size?: number }) {
@@ -71,7 +105,7 @@ const NAV_ICON: Record<string, string> = {
   '/admin': 'dashboard', '/admin/offdocks': 'offdock', '/admin/shifts': 'clock',
   '/admin/manifest': 'container', '/admin/users': 'users', '/admin/companies': 'building',
   '/admin/settings': 'settings', '/agent': 'target', '/appointments': 'calendar',
-  '/operator': 'monitor', '/transporter': 'calendar', '/transporter/new': 'plus', '/msc': 'chart',
+  '/admin/audit': 'audit', '/operator': 'monitor', '/transporter': 'calendar', '/transporter/new': 'plus', '/msc': 'chart',
 };
 
 // Logo texte (repli si l'image n'est pas disponible).
@@ -161,9 +195,10 @@ export function Badge({ status }: { status: string }) {
 }
 
 export function Kpi({ value, label, accent }: { value: ReactNode; label: string; accent?: boolean }) {
+  const display = useCountUp(value);
   return (
     <div className={`card kpi ${accent ? 'accent' : ''}`}>
-      <span className="value">{value}</span>
+      <span className="value">{display}</span>
       <span className="label">{label}</span>
     </div>
   );

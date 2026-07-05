@@ -22,6 +22,19 @@ export interface ManagedUser {
   createdAt: string;
 }
 
+export interface AuditEntry {
+  id: string;
+  createdAt: string;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  actor?: string | null;
+  role?: string | null;
+  status?: number | null;
+  path?: string | null;
+  body?: any;
+}
+
 export interface Company {
   id: string;
   name: string;

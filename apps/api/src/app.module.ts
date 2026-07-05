@@ -1,4 +1,5 @@
 import { Controller, Get, Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { ContainersModule } from './containers/containers.module';
 import { SettingsModule } from './settings/settings.module';
@@ -10,6 +11,8 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { ManifestModule } from './manifest/manifest.module';
+import { AuditModule } from './audit/audit.module';
+import { AuditInterceptor } from './audit/audit.interceptor';
 
 @Controller()
 class HealthController {
@@ -32,7 +35,9 @@ class HealthController {
     AnalyticsModule,
     ShiftsModule,
     ManifestModule,
+    AuditModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
 })
 export class AppModule {}
