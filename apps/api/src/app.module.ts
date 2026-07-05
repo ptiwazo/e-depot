@@ -2,6 +2,8 @@ import { Controller, Get, Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { ContainersModule } from './containers/containers.module';
 import { SettingsModule } from './settings/settings.module';
+import { UsersModule } from './users/users.module';
+import { CompaniesModule } from './companies/companies.module';
 import { AuthModule } from './auth/auth.module';
 import { OffdocksModule } from './offdocks/offdocks.module';
 import { AppointmentsModule } from './appointments/appointments.module';
@@ -22,6 +24,8 @@ class HealthController {
     PrismaModule,
     ContainersModule,
     SettingsModule,
+    UsersModule,
+    CompaniesModule,
     AuthModule,
     OffdocksModule,
     AppointmentsModule,

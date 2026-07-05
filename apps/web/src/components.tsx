@@ -17,6 +17,8 @@ const NAV: Record<string, { to: string; label: string }[]> = {
     { to: '/admin/offdocks', label: 'OFF-DOCKs' },
     { to: '/admin/shifts', label: 'Shifts' },
     { to: '/admin/manifest', label: 'Base conteneurs' },
+    { to: '/admin/users', label: 'Utilisateurs' },
+    { to: '/admin/companies', label: 'Sociétés' },
     { to: '/admin/settings', label: 'Paramètres' },
     { to: '/agent', label: "File d'affectation" },
     { to: '/appointments', label: 'Rendez-vous' },

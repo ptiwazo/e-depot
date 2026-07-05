@@ -9,6 +9,28 @@ export interface User {
   offDock?: string | null;
 }
 
+export interface ManagedUser {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string | null;
+  role: string;
+  active: boolean;
+  pending: boolean; // compte pas encore activé (mot de passe non défini)
+  company?: { id: string; name: string } | null;
+  offDock?: { id: string; code: string; name: string } | null;
+  createdAt: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  rccm?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  _count?: { users: number };
+}
+
 export interface ContainerManifest {
   id: string;
   containerNumber: string;

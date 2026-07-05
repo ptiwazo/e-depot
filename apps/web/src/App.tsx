@@ -1,6 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import Activate from './pages/Activate';
+import UsersAdmin from './pages/UsersAdmin';
+import CompaniesAdmin from './pages/CompaniesAdmin';
 import AdminDashboard from './pages/AdminDashboard';
 import OffDocks from './pages/OffDocks';
 import ShiftsAdmin from './pages/ShiftsAdmin';
@@ -36,6 +40,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
+      <Route path="/activate" element={<Activate />} />
 
       <Route
         path="/"
@@ -51,6 +57,8 @@ export default function App() {
       <Route path="/admin/shifts" element={<Protected roles={['ADMIN']}><ShiftsAdmin /></Protected>} />
       <Route path="/admin/manifest" element={<Protected roles={['ADMIN']}><ManifestAdmin /></Protected>} />
       <Route path="/admin/settings" element={<Protected roles={['ADMIN']}><SettingsAdmin /></Protected>} />
+      <Route path="/admin/users" element={<Protected roles={['ADMIN']}><UsersAdmin /></Protected>} />
+      <Route path="/admin/companies" element={<Protected roles={['ADMIN']}><CompaniesAdmin /></Protected>} />
 
       <Route path="/transporter" element={<Protected roles={['TRANSPORTER']}><TransporterList /></Protected>} />
       <Route path="/transporter/new" element={<Protected roles={['TRANSPORTER']}><NewAppointment /></Protected>} />

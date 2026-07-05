@@ -16,8 +16,9 @@ model User {
   password         String
   name             String
   phone            String?
-  role             String   // ADMIN | OPERATOR | TRANSPORTER | DRIVER | MSC
+  role             String   // ADMIN | AGENT | OPERATOR | TRANSPORTER | DRIVER | MSC
   active           Boolean  @default(true)
+  activationToken  String?  @unique // jeton de définition du mot de passe (compte créé par l'admin)
   transportCompany TransportCompany? @relation(fields: [companyId], references: [id])
   companyId        String?
   offDock          OffDock? @relation(fields: [offDockId], references: [id])

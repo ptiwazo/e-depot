@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 const DEMO = [
@@ -60,6 +60,9 @@ export default function Login() {
           <button className="btn" style={{ width: '100%' }} disabled={busy}>
             {busy ? 'Connexion…' : 'Se connecter'}
           </button>
+          <div className="small" style={{ marginTop: 10, textAlign: 'center' }}>
+            Transporteur ? <Link to="/register">Créer un compte</Link>
+          </div>
 
           <div className="demo-accounts">
             <div className="muted small" style={{ marginBottom: 6 }}>Comptes de démonstration :</div>
