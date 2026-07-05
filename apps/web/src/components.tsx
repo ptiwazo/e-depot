@@ -39,12 +39,39 @@ const NAV: Record<string, { to: string; label: string }[]> = {
   MSC: [{ to: '/msc', label: 'Supervision' }],
 };
 
-// Icônes de navigation (par route).
+// Jeu d'icônes vectorielles maison (trait géométrique, style angulaire MEDLOG).
+const ICONS: Record<string, ReactNode> = {
+  dashboard: (<><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>),
+  offdock: (<><path d="M3 21V9l9-5 9 5v12" /><path d="M2 21h20" /><rect x="8" y="13" width="8" height="8" /></>),
+  clock: (<><circle cx="12" cy="12" r="9" /><path d="M12 7.5V12l3 2" /></>),
+  container: (<><rect x="3" y="6" width="18" height="12" rx="1" /><path d="M7.5 6v12M12 6v12M16.5 6v12" /></>),
+  users: (<><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0" /><path d="M16 5.6a3 3 0 0 1 0 5.5M17.6 20a5.6 5.6 0 0 0-3-4.9" /></>),
+  building: (<><rect x="4" y="3" width="16" height="18" rx="1" /><path d="M9 7h0M15 7h0M9 11h0M15 11h0M9 15h0M15 15h0M10 21v-3h4v3" /></>),
+  settings: (<><circle cx="12" cy="12" r="3.2" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></>),
+  target: (<><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.6" fill="currentColor" /></>),
+  calendar: (<><rect x="3.5" y="5" width="17" height="16" rx="1.5" /><path d="M3.5 9.5h17M8 3v4M16 3v4" /></>),
+  monitor: (<><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></>),
+  plus: (<><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>),
+  chart: (<><path d="M4 4v16h16" /><path d="M7.5 15l3-4 3 2 4-6" /></>),
+};
+
+export function Icon({ name, size = 18 }: { name: string; size?: number }) {
+  const inner = ICONS[name];
+  if (!inner) return null;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {inner}
+    </svg>
+  );
+}
+
+// Icône de navigation (par route).
 const NAV_ICON: Record<string, string> = {
-  '/admin': '📊', '/admin/offdocks': '🏭', '/admin/shifts': '🕐', '/admin/manifest': '📦',
-  '/admin/users': '👤', '/admin/companies': '🏢', '/admin/settings': '⚙️',
-  '/agent': '🎯', '/appointments': '📅', '/operator': '🖥️',
-  '/transporter': '📅', '/transporter/new': '➕', '/msc': '📈',
+  '/admin': 'dashboard', '/admin/offdocks': 'offdock', '/admin/shifts': 'clock',
+  '/admin/manifest': 'container', '/admin/users': 'users', '/admin/companies': 'building',
+  '/admin/settings': 'settings', '/agent': 'target', '/appointments': 'calendar',
+  '/operator': 'monitor', '/transporter': 'calendar', '/transporter/new': 'plus', '/msc': 'chart',
 };
 
 // Logo texte (repli si l'image n'est pas disponible).
@@ -88,7 +115,7 @@ export function Layout({ children, title }: { children: ReactNode; title: string
         <BrandLogo light />
         {links.map((l) => (
           <NavLink key={l.to} to={l.to} end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-            <span className="nav-ico">{NAV_ICON[l.to] ?? '•'}</span>
+            <span className="nav-ico"><Icon name={NAV_ICON[l.to] ?? 'dashboard'} /></span>
             <span>{l.label}</span>
           </NavLink>
         ))}
