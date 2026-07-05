@@ -146,6 +146,16 @@ export function Layout({ children, title }: { children: ReactNode; title: string
   );
 }
 
+// Bande hero photo (en tête de page).
+export function HeroBand({ title, subtitle, hero }: { title: string; subtitle?: string; hero?: string }) {
+  return (
+    <div className="hero-band" style={hero ? ({ ['--hero']: `url('${hero}')` } as any) : undefined}>
+      {subtitle && <div className="sub">{subtitle}</div>}
+      <h1>{title}</h1>
+    </div>
+  );
+}
+
 export function Badge({ status }: { status: string }) {
   return <span className={`badge ${status}`}>{status.replace('_', ' ')}</span>;
 }

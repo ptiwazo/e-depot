@@ -32,7 +32,7 @@ export default function Register() {
 
   return (
     <div className="login-wrap">
-      <div className="login-brand">
+      <div className="login-brand" style={{ ['--hero' as any]: "url('/e-depot/hero-yard.jpg')" }}>
         <div style={{ marginBottom: 24 }}><BrandLogo height={44} /></div>
         <div className="tag">TRANSPORT &amp; LOGISTICS</div>
         <div className="big">e-<span>depot</span></div>

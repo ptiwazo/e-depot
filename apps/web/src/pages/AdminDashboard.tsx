@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, Analytics } from '../api';
-import { Layout, Kpi, OccupancyBar } from '../components';
+import { Layout, Kpi, OccupancyBar, HeroBand } from '../components';
 
 export default function AdminDashboard() {
   const [data, setData] = useState<Analytics | null>(null);
@@ -17,6 +17,10 @@ export default function AdminDashboard() {
         <div className="muted">Chargement…</div>
       ) : (
         <>
+          <HeroBand
+            subtitle="MEDLOG Côte d'Ivoire — Exploitation OFF-DOCK"
+            title={`${data.total} rendez-vous · ${data.completedToday} conteneurs traités aujourd'hui`}
+          />
           <div className="grid cols-4">
             <Kpi accent value={data.total} label="Rendez-vous (total)" />
             <Kpi value={data.completedToday} label="Conteneurs traités aujourd'hui" />

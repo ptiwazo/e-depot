@@ -371,6 +371,70 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--y
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
 
+/* ===========================================================================
+   Signature angulaire MEDLOG — coins coupés en biais (repris des lettres du logo)
+   =========================================================================== */
+.btn:not(.ghost) {
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  box-shadow: none;
+  filter: drop-shadow(0 3px 8px rgba(212, 173, 62, 0.30));
+}
+.btn.blue { filter: drop-shadow(0 3px 8px rgba(0, 83, 137, 0.30)); }
+.btn.danger { filter: drop-shadow(0 3px 8px rgba(174, 20, 0, 0.28)); }
+.btn.dark { filter: drop-shadow(0 3px 8px rgba(34, 34, 33, 0.32)); }
+.btn:not(.ghost):hover { filter: drop-shadow(0 6px 14px rgba(212, 173, 62, 0.42)) brightness(1.03); }
+.btn.blue:hover { filter: drop-shadow(0 6px 14px rgba(0, 83, 137, 0.42)) brightness(1.05); }
+.btn.danger:hover { filter: drop-shadow(0 6px 14px rgba(174, 20, 0, 0.4)) brightness(1.05); }
+.btn:disabled { filter: none; }
+.btn.sm:not(.ghost) {
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  filter: none;
+}
+/* Badges & chips = étiquettes techniques angulaires */
+.badge, .role-chip {
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+}
+/* Onglet actif = repère directionnel (flèche) */
+.nav-link.active {
+  clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 0 100%);
+  box-shadow: none;
+}
+/* Pastille logo : coin coupé + ombre portée qui suit la découpe */
+.logo-chip {
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  box-shadow: none;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+}
+
+/* ===========================================================================
+   Bande hero photo (tableau de bord)
+   =========================================================================== */
+.hero-band {
+  position: relative; overflow: hidden;
+  border-radius: var(--radius);
+  padding: 26px 28px; margin-bottom: 18px;
+  color: #fff; min-height: 128px;
+  display: flex; flex-direction: column; justify-content: center;
+  background: linear-gradient(100deg, #16150f, #201f16);
+  box-shadow: var(--shadow-md);
+  animation: fadeInUp 0.5s var(--ease) both;
+}
+.hero-band::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background-image: var(--hero, url('/e-depot/hero-yard.jpg'));
+  background-size: cover; background-position: center 38%;
+  filter: saturate(1.05) brightness(0.85);
+  transform: scale(1.05);
+  animation: kenburns 40s ease-in-out infinite alternate;
+}
+.hero-band::after {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(90deg, rgba(15,14,10,0.9) 0%, rgba(15,14,10,0.6) 45%, rgba(15,14,10,0.2) 100%);
+}
+.hero-band > * { position: relative; z-index: 1; }
+.hero-band h1 { color: #fff; margin: 0 0 4px; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5); }
+.hero-band .sub { color: var(--yellow); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+
 .timeline { list-style: none; padding: 0; margin: 0; }
 .timeline li { position: relative; padding: 0 0 14px 22px; border-left: 2px solid var(--grey-200); }
 .timeline li:last-child { border-left-color: transparent; }
