@@ -6,6 +6,7 @@ export const SETTING_DEFAULTS = {
   lead_hours_propre_moyen: '48', // préavis mini (h) si le conteneur est en « propre moyen »
   lead_hours_default: '24', // préavis mini (h) dans les autres cas
   propre_moyen_label: 'propre moyen', // valeur du champ « transporteur » qui déclenche le préavis renforcé
+  gate_grace_minutes: '30', // tolérance (min) avant/après le créneau pour la validation opérateur
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

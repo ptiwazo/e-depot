@@ -20,10 +20,10 @@ export class SettingsController {
     for (const key of SETTING_KEYS) {
       if (!(key in body)) continue;
       const raw = String(body[key] ?? '').trim();
-      if (key.startsWith('lead_hours_')) {
+      if (key.includes('hours') || key.includes('minutes')) {
         const n = Number(raw);
-        if (!Number.isInteger(n) || n < 0 || n > 2000) {
-          throw new BadRequestException(`Délai invalide pour « ${key} » (entier entre 0 et 2000 heures).`);
+        if (!Number.isInteger(n) || n < 0 || n > 100000) {
+          throw new BadRequestException(`Valeur invalide pour « ${key} » (entier positif).`);
         }
         await this.settings.set(key, String(n));
       } else {

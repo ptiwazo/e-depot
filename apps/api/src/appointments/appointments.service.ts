@@ -323,6 +323,26 @@ export class AppointmentsService {
     if (!canTransition(from, to)) {
       throw new BadRequestException(`Transition ${from} → ${to} non autorisée`);
     }
+
+    // Contrôle d'entrée : un OPÉRATEUR ne peut enregistrer l'arrivée / le déchargement /
+    // la dépose que PENDANT le créneau du rendez-vous (± tolérance réglable).
+    const GATED: AppointmentStatus[] = ['ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
+    if (user.role === 'OPERATOR' && GATED.includes(to) && appt.slotStart && appt.slotEnd) {
+      const grace = (await this.settings.getInt('gate_grace_minutes')) * 60_000;
+      const now = Date.now();
+      const start = new Date(appt.slotStart).getTime();
+      const end = new Date(appt.slotEnd).getTime();
+      if (now < start - grace || now > end + grace) {
+        const fmt = (d: Date) =>
+          new Date(d).toLocaleString('fr-FR', {
+            timeZone: 'UTC', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+          });
+        throw new BadRequestException(
+          `Hors créneau : ce rendez-vous est prévu du ${fmt(appt.slotStart)} au ${fmt(appt.slotEnd)}. ` +
+            `La validation n'est possible que pendant le créneau (tolérance ${grace / 60000} min).`,
+        );
+      }
+    }
     const updated = await this.prisma.appointment.update({
       where: { id },
       data: {

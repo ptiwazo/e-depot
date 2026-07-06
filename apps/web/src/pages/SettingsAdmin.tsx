@@ -6,6 +6,7 @@ type Settings = {
   lead_hours_propre_moyen: string;
   lead_hours_default: string;
   propre_moyen_label: string;
+  gate_grace_minutes: string;
 };
 
 export default function SettingsAdmin() {
@@ -69,6 +70,23 @@ export default function SettingsAdmin() {
             Valeur exacte du champ « transporteur » qui déclenche le préavis renforcé (insensible à la casse et aux accents).
           </div>
         </div>
+
+        <div className="alert info" style={{ marginTop: 4 }}>
+          <b>Contrôle d'entrée</b> — l'opérateur ne peut valider l'arrivée / le déchargement / la dépose d'un
+          conteneur que pendant le créneau du rendez-vous, avec la tolérance ci-dessous.
+        </div>
+        <div className="field">
+          <label>Tolérance de créneau (minutes)</label>
+          <input
+            type="number" min={0} max={1440}
+            value={s.gate_grace_minutes}
+            onChange={(e) => setS({ ...s, gate_grace_minutes: e.target.value })}
+          />
+          <div className="small muted" style={{ marginTop: 4 }}>
+            Marge autorisée avant le début et après la fin du créneau (ex. 30 = arrivée acceptée jusqu'à 30 min avant/après).
+          </div>
+        </div>
+
         <button className="btn" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
       </form>
     </Layout>
