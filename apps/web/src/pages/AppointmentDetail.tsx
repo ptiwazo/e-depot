@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { api, Appointment } from '../api';
 import { useAuth } from '../auth';
@@ -84,6 +84,12 @@ export default function AppointmentDetail() {
   return (
     <Layout title="Détail du rendez-vous">
       {error && <div className="alert error">{error}</div>}
+      {user?.role === 'TRANSPORTER' && (
+        <div className="flex between" style={{ marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+          <Link className="btn ghost sm" to="/transporter">← Mes rendez-vous</Link>
+          <Link className="btn sm" to="/transporter/new">+ Nouvelle demande</Link>
+        </div>
+      )}
       {!appt ? (
         <div className="page-center"><Loader /></div>
       ) : (

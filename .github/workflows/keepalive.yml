@@ -1,0 +1,16 @@
+name: keepalive
+
+# Maintient l'API Render (plan gratuit) éveillée pour éviter les démarrages à froid
+# (~30-50 s de latence après 15 min d'inactivité). Ping /api/health toutes les ~10 min.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API health
+        run: |
+          curl -fsS --max-time 90 https://e-depot-api.onrender.com/api/health || true

@@ -75,18 +75,15 @@ export function NewAppointment() {
     trailerPlate: '',
     driverName: '',
     driverPhone: '',
-    requestedDate: new Date().toISOString().slice(0, 10),
-    shiftCode: '',
+    requestedDate: '', // vide : le transporteur choisit consciemment (évite la confusion avec le RDV affecté)
+    shiftCode: '', // vide : idem
   });
   const [verify, setVerify] = useState<VerifyResult | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api<Shift[]>('/shifts').then((s) => {
-      setShifts(s);
-      if (s.length) setForm((f) => ({ ...f, shiftCode: f.shiftCode || s[0].code }));
-    });
+    api<Shift[]>('/shifts').then(setShifts);
   }, []);
 
   function set(k: string, v: string) {
@@ -102,8 +99,8 @@ export function NewAppointment() {
         `/manifest/verify?container=${encodeURIComponent(form.containerNumber)}&bl=${encodeURIComponent(form.blNumber)}`,
       );
       setVerify(res);
-      // Repousse la date si elle est plus proche que le préavis exigé pour ce conteneur.
-      if (res.found && res.blMatch) {
+      // Repousse la date si (et seulement si) une date est déjà choisie et trop proche du préavis.
+      if (res.found && res.blMatch && form.requestedDate) {
         const md = minDateFor(res.minLeadHours);
         if (form.requestedDate < md) set('requestedDate', md);
       }
@@ -122,6 +119,7 @@ export function NewAppointment() {
     if (!baseOk) return setError('Conteneur + BL non vérifiés dans la base MEDLOG.');
     if (!form.truckPlate.trim() || !form.trailerPlate.trim() || !form.driverName.trim())
       return setError('Camion, remorque et chauffeur sont obligatoires.');
+    if (!form.requestedDate) return setError('La date souhaitée est obligatoire.');
     if (!form.shiftCode) return setError('Le shift souhaité est obligatoire.');
     // Préavis (identique au backend) : le début du créneau (date + heure du shift, en UTC)
     // doit être au moins à minLeadHours de maintenant.
@@ -226,6 +224,10 @@ export function NewAppointment() {
           </div>
 
           <h3 style={{ marginTop: 18 }}>Créneau souhaité</h3>
+          <div className="alert info small" style={{ marginBottom: 10 }}>
+            Indiquez la date et le shift <b>souhaités</b>. L'<b>OFF-DOCK et le créneau définitifs</b> seront
+            affectés par un agent MEDLOG (ce ne sont pas encore vos date/heure de rendez-vous).
+          </div>
           <div className="row">
             <div className="field">
               <label>Date souhaitée *</label>
@@ -234,6 +236,7 @@ export function NewAppointment() {
             <div className="field">
               <label>Shift souhaité *</label>
               <select value={form.shiftCode} onChange={(e) => set('shiftCode', e.target.value)} required>
+                <option value="">— choisir —</option>
                 {shifts.map((s) => (
                   <option key={s.code} value={s.code}>{s.label} ({s.startTime}-{s.endTime})</option>
                 ))}
