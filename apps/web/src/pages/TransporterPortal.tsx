@@ -123,6 +123,22 @@ export function NewAppointment() {
     if (!form.truckPlate.trim() || !form.trailerPlate.trim() || !form.driverName.trim())
       return setError('Camion, remorque et chauffeur sont obligatoires.');
     if (!form.shiftCode) return setError('Le shift souhaité est obligatoire.');
+    // Préavis (identique au backend) : le début du créneau (date + heure du shift, en UTC)
+    // doit être au moins à minLeadHours de maintenant.
+    if (verify?.minLeadHours) {
+      const sh = shifts.find((s) => s.code === form.shiftCode);
+      if (sh) {
+        const [h, m] = sh.startTime.split(':').map(Number);
+        const slot = new Date(form.requestedDate + 'T00:00:00.000Z');
+        slot.setUTCHours(h || 0, m || 0, 0, 0);
+        if (slot.getTime() < Date.now() + verify.minLeadHours * 3600_000) {
+          return setError(
+            `Préavis insuffisant : ce conteneur exige une réservation au moins ${verify.minLeadHours}h à l'avance` +
+              `${verify.propreMoyen ? ' (propre moyen)' : ''}. Choisissez une date/un créneau plus lointain.`,
+          );
+        }
+      }
+    }
     setBusy(true);
     try {
       const appt = await api<Appointment>('/appointments', {
@@ -134,7 +150,7 @@ export function NewAppointment() {
           trailerPlate: form.trailerPlate,
           driverName: form.driverName,
           driverPhone: form.driverPhone || undefined,
-          requestedDate: new Date(form.requestedDate + 'T00:00:00').toISOString(),
+          requestedDate: new Date(form.requestedDate + 'T00:00:00.000Z').toISOString(),
           shiftCode: form.shiftCode,
         }),
       });

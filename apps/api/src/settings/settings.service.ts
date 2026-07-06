@@ -56,7 +56,10 @@ export class SettingsService {
    * champ « transporteur » (« propre moyen » → délai renforcé).
    */
   async leadHoursFor(transporteur?: string | null): Promise<{ propreMoyen: boolean; minHours: number }> {
-    const propreMoyen = norm(transporteur) === norm(await this.get('propre_moyen_label'));
+    const label = norm(await this.get('propre_moyen_label'));
+    const t = norm(transporteur);
+    // Tolérant : correspondance exacte OU l'intitulé contient le libellé « propre moyen ».
+    const propreMoyen = !!label && (t === label || t.includes(label));
     const minHours = propreMoyen
       ? await this.getInt('lead_hours_propre_moyen')
       : await this.getInt('lead_hours_default');

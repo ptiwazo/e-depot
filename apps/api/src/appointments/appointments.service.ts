@@ -104,8 +104,9 @@ export class AppointmentsService {
     //    (Côte d'Ivoire = UTC, pas de décalage à gérer.)
     const { propreMoyen, minHours } = await this.settings.leadHoursFor(entry.transporteur);
     const [sh, sm] = shiftCfg.startTime.split(':').map(Number);
+    // Début du créneau = date du RDV + heure de début du shift, en UTC (CI = UTC ; pas de décalage serveur).
     const slotStart = new Date(requestedDate);
-    slotStart.setHours(sh || 0, sm || 0, 0, 0);
+    slotStart.setUTCHours(sh || 0, sm || 0, 0, 0);
     if (slotStart.getTime() < Date.now() + minHours * 3600_000) {
       throw new BadRequestException(
         `Préavis insuffisant : ce conteneur exige une réservation au moins ${minHours}h à l'avance` +
