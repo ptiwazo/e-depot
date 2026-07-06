@@ -122,7 +122,14 @@ a:hover { color: var(--yellow-deep); }
 .sidebar .userbox b { color: var(--white); display: block; }
 .sidebar .help-link { color: #b8b4ac; font-weight: normal; margin-bottom: 6px; }
 .sidebar .help-link:hover { color: #fff; }
-.logout { margin-top: 8px; background: none; border: 1px solid #4a4945; color: #cfcbc4; }
+/* Spécificité (0,0,3,0) pour l'emporter sur .btn.ghost qui forçait un texte noir invisible. */
+.sidebar .userbox .logout {
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #55534e;
+  color: #f2efe9;
+}
+.sidebar .userbox .logout:hover { background: var(--red); border-color: var(--red); color: #fff; }
 .logout:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
