@@ -324,23 +324,25 @@ export class AppointmentsService {
       throw new BadRequestException(`Transition ${from} → ${to} non autorisée`);
     }
 
-    // Contrôle d'entrée : un OPÉRATEUR ne peut enregistrer l'arrivée / le déchargement /
-    // la dépose que PENDANT le créneau du rendez-vous (± tolérance réglable).
+    // Contrôle d'entrée : un OPÉRATEUR ne peut enregistrer l'arrivée / le déchargement / la
+    // dépose que sur SON OFF-DOCK (déjà vérifié par findOne), à la DATE du rendez-vous et
+    // pendant le SHIFT du rendez-vous. La fenêtre date+shift est recalculée depuis
+    // requestedDate + shiftCode (± tolérance réglable). Côte d'Ivoire = UTC.
     const GATED: AppointmentStatus[] = ['ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
-    if (user.role === 'OPERATOR' && GATED.includes(to) && appt.slotStart && appt.slotEnd) {
-      const grace = (await this.settings.getInt('gate_grace_minutes')) * 60_000;
-      const now = Date.now();
-      const start = new Date(appt.slotStart).getTime();
-      const end = new Date(appt.slotEnd).getTime();
-      if (now < start - grace || now > end + grace) {
-        const fmt = (d: Date) =>
-          new Date(d).toLocaleString('fr-FR', {
-            timeZone: 'UTC', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
-          });
-        throw new BadRequestException(
-          `Hors créneau : ce rendez-vous est prévu du ${fmt(appt.slotStart)} au ${fmt(appt.slotEnd)}. ` +
-            `La validation n'est possible que pendant le créneau (tolérance ${grace / 60000} min).`,
-        );
+    if (user.role === 'OPERATOR' && GATED.includes(to) && appt.shiftCode) {
+      const shiftCfg = await this.prisma.shift.findUnique({ where: { code: appt.shiftCode } });
+      if (shiftCfg) {
+        const { start, end } = buildShift(appt.requestedDate, shiftCfg);
+        const grace = (await this.settings.getInt('gate_grace_minutes')) * 60_000;
+        const now = Date.now();
+        if (now < start.getTime() - grace || now > end.getTime() + grace) {
+          const fmtD = (d: Date) => new Date(d).toLocaleDateString('fr-FR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: '2-digit' });
+          const fmtH = (d: Date) => new Date(d).toLocaleTimeString('fr-FR', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' });
+          throw new BadRequestException(
+            `Hors créneau : ce rendez-vous est prévu le ${fmtD(start)} sur le shift ${shiftCfg.label} ` +
+              `(${fmtH(start)}–${fmtH(end)}). La validation n'est possible que ce jour-là, pendant ce shift, sur votre OFF-DOCK.`,
+          );
+        }
       }
     }
     const updated = await this.prisma.appointment.update({
