@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <Layout title="Tableau de bord national">
+    <Layout title="Tableau de bord">
       {err && <div className="alert error">{err}</div>}
       {!data ? (
         <div className="page-center"><Loader /></div>
