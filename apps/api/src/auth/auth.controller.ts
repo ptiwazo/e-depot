@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -29,6 +30,8 @@ class ActivateDto {
 export class AuthController {
   constructor(private auth: AuthService) {}
 
+  // Anti brute-force : 15 tentatives de connexion / minute / IP.
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.auth.login(dto.email, dto.password);

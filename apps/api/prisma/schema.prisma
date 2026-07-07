@@ -53,6 +53,8 @@ model ContainerManifest {
   createdAt       DateTime @default(now())
 
   @@index([blNumber])
+  @@index([containerType])
+  @@index([transporteur])
 }
 
 model OffDock {
@@ -101,6 +103,8 @@ model Appointment {
 
   @@index([status])
   @@index([offDockId, slotStart])
+  @@index([companyId])
+  @@index([createdById])
 }
 
 model AppointmentEvent {

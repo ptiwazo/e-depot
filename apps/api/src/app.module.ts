@@ -1,5 +1,6 @@
 import { Controller, Get, Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { ContainersModule } from './containers/containers.module';
 import { SettingsModule } from './settings/settings.module';
@@ -25,6 +26,8 @@ class HealthController {
 
 @Module({
   imports: [
+    // Rate-limiting : 300 requêtes / minute / IP (généreux ; le login est plus strict).
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     PrismaModule,
     ContainersModule,
     SettingsModule,
@@ -40,6 +43,9 @@ class HealthController {
     ReportsModule,
   ],
   controllers: [HealthController],
-  providers: [{ provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
