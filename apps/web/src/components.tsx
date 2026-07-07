@@ -223,12 +223,14 @@ export function Badge({ status }: { status: string }) {
   return <span className={`badge ${status}`}>{status.replace('_', ' ')}</span>;
 }
 
-export function Kpi({ value, label, accent }: { value: ReactNode; label: string; accent?: boolean }) {
+export function Kpi({ value, label, accent, hint, tone }: { value: ReactNode; label: string; accent?: boolean; hint?: string; tone?: 'good' | 'warn' | 'crit' }) {
   const display = useCountUp(value);
+  const toneColor = tone === 'crit' ? 'var(--red)' : tone === 'warn' ? '#c98a00' : tone === 'good' ? '#1a8a4a' : undefined;
   return (
     <div className={`card kpi ${accent ? 'accent' : ''}`}>
-      <span className="value">{display}</span>
+      <span className="value" style={toneColor ? { color: toneColor } : undefined}>{display}</span>
       <span className="label">{label}</span>
+      {hint && <span className="label" style={{ opacity: 0.65, marginTop: 2, fontSize: '.72rem', fontWeight: 500 }}>{hint}</span>}
     </div>
   );
 }

@@ -215,6 +215,63 @@ export class AppointmentsService {
     return updated;
   }
 
+  /**
+   * Report d'un RDV par un AGENT MEDLOG : change la date et/ou le shift souhaités,
+   * en fonction de la capacité de l'OFF-DOCK. Si le RDV est déjà affecté (créneau
+   * ferme), les bornes du créneau sont recalculées. Le statut est conservé.
+   */
+  async reschedule(
+    user: AuthUser,
+    id: string,
+    dto: { requestedDate?: string; shiftCode?: string; note?: string },
+  ) {
+    const appt = await this.prisma.appointment.findUnique({ where: { id } });
+    if (!appt) throw new NotFoundException('Rendez-vous introuvable');
+    const CLOSED = ['COMPLETED', 'CANCELLED', 'REJECTED', 'NO_SHOW'];
+    if (CLOSED.includes(appt.status)) {
+      throw new BadRequestException(`Report impossible : rendez-vous ${appt.status}.`);
+    }
+
+    const newDate = dto.requestedDate ? new Date(dto.requestedDate) : appt.requestedDate;
+    if (isNaN(newDate.getTime())) throw new BadRequestException('Date de report invalide.');
+    const newShiftCode = dto.shiftCode || appt.shiftCode || undefined;
+    if (!newShiftCode) throw new BadRequestException('Shift manquant.');
+    const shiftCfg = await this.prisma.shift.findUnique({ where: { code: newShiftCode } });
+    if (!shiftCfg) throw new BadRequestException('Shift invalide.');
+
+    const data: any = { requestedDate: newDate, shiftCode: newShiftCode };
+    // RDV déjà affecté → on recale le créneau ferme sur la nouvelle date/shift.
+    if (appt.offDockId && appt.slotStart) {
+      const shift = buildShift(newDate, shiftCfg);
+      data.slotStart = shift.start;
+      data.slotEnd = shift.end;
+    }
+
+    const fmtD = new Date(newDate).toLocaleDateString('fr-FR', {
+      timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+    const updated = await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        ...data,
+        events: {
+          create: {
+            fromStatus: appt.status,
+            toStatus: appt.status,
+            note: `Reporté au ${fmtD} · shift ${shiftCfg.label} par agent ${user.email}` +
+              (dto.note ? ` — ${dto.note}` : ''),
+            actorId: user.id,
+          },
+        },
+      },
+      include: this.include(),
+    });
+    await this.audit(user.id, 'APPOINTMENT_RESCHEDULE', id, {
+      requestedDate: newDate.toISOString(), shift: newShiftCode,
+    });
+    return updated;
+  }
+
   /** Construit l'état des OFF-DOCK pour le shift visé et lance le moteur. */
   private async computeAssignment(shift: { start: Date; end: Date; code: string; label: string }, containerType: string) {
     const dayStart = new Date(shift.start);

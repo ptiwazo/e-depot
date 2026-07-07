@@ -117,7 +117,19 @@ export interface Analytics {
   noShow: number;
   noShowRate: number;
   avgTurnaroundMin: number;
+  avgAssignMin: number;
+  pendingAssignment: number;
+  scheduled: number;
+  onSite: number;
+  completionRate: number;
+  todayScheduled: number;
+  upcoming7d: number;
+  avgOccupancy: number;
+  congestedDocks: number;
   byStatus: Record<string, number>;
+  byShiftToday: Record<string, number>;
+  weeklyTrend: { date: string; count: number }[];
+  topTransporters: { name: string; count: number }[];
   offDocks: { code: string; name: string; city: string; load: number; capacity: number; occupancy: number; congestion: number }[];
 }
 

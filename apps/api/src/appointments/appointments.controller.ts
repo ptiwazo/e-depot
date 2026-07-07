@@ -33,6 +33,12 @@ class AssignDto {
   @IsString() @IsNotEmpty() offDockId!: string;
 }
 
+class RescheduleDto {
+  @IsOptional() @IsISO8601() requestedDate?: string;
+  @IsOptional() @IsString() shiftCode?: string;
+  @IsOptional() @IsString() note?: string;
+}
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentsController {
@@ -67,6 +73,13 @@ export class AppointmentsController {
     return this.service.assign(user, id, dto.offDockId);
   }
 
+  // Report d'un RDV (date/shift) par un agent, selon la capacité de l'OFF-DOCK.
+  @Roles('AGENT', 'ADMIN')
+  @Post(':id/reschedule')
+  reschedule(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: RescheduleDto) {
+    return this.service.reschedule(user, id, dto);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.service.findOne(user, id);
@@ -77,7 +90,7 @@ export class AppointmentsController {
     return this.service.qr(user, id);
   }
 
-  @Roles('OPERATOR', 'ADMIN', 'TRANSPORTER')
+  @Roles('OPERATOR', 'ADMIN', 'TRANSPORTER', 'AGENT')
   @Post(':id/transition')
   transition(
     @CurrentUser() user: AuthUser,
