@@ -7,6 +7,13 @@ export const SETTING_DEFAULTS = {
   lead_hours_default: '24', // préavis mini (h) dans les autres cas
   propre_moyen_label: 'propre moyen', // valeur du champ « transporteur » qui déclenche le préavis renforcé
   gate_grace_minutes: '30', // tolérance (min) avant/après le créneau pour la validation opérateur
+  reschedule_lead_hours: '24', // préavis mini (h) pour un report de RDV par l'agent (même après affectation)
+  // Paramétrage SMTP pour l'envoi d'e-mails aux transporteurs (vide = désactivé).
+  smtp_from: '', // adresse e-mail d'expédition
+  smtp_host: '', // serveur SMTP d'envoi
+  smtp_port: '587', // port SMTP
+  smtp_user: '', // login SMTP
+  smtp_password: '', // mot de passe SMTP
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

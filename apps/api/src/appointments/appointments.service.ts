@@ -23,6 +23,7 @@ import { isReeferType } from '../domain/sizetype';
 import { haversineKm, PORT_ABIDJAN } from './geo';
 import { computeCongestion } from '../offdocks/congestion';
 import { AuthUser } from '../common/current-user.decorator';
+import { MailService } from '../mail/mail.service';
 
 const ACTIVE_STATUSES = ['ASSIGNED', 'CONFIRMED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
 
@@ -32,6 +33,7 @@ export class AppointmentsService {
     private prisma: PrismaService,
     @Inject(CONTAINER_REPOSITORY) private readonly containers: ContainerRepository,
     private readonly settings: SettingsService,
+    private readonly mail: MailService,
   ) {}
 
   private ref(): string {
@@ -212,6 +214,15 @@ export class AppointmentsService {
       include: this.include(),
     });
     await this.audit(user.id, 'APPOINTMENT_ASSIGN', id, { offDock: offDock.code, shift: shift.code });
+    await this.notifyTransporter(
+      updated,
+      `RDV ${updated.reference} confirmé — ${offDock.code}`,
+      `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été affecté.\n` +
+        `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
+        `Créneau : le ${AppointmentsService.fmtD(shift.start)} · ${shift.label} ` +
+        `(${AppointmentsService.fmtH(shift.start)}–${AppointmentsService.fmtH(shift.end)})\n\n` +
+        `Présentez le QR code de votre demande au portail du site.\n\ne-depot — MEDLOG Côte d'Ivoire`,
+    );
     return updated;
   }
 
@@ -239,10 +250,20 @@ export class AppointmentsService {
     const shiftCfg = await this.prisma.shift.findUnique({ where: { code: newShiftCode } });
     if (!shiftCfg) throw new BadRequestException('Shift invalide.');
 
+    // Préavis minimum de report (paramétrable par l'admin), même après affectation.
+    // Le nouveau créneau (date + heure de début du shift) doit être suffisamment lointain.
+    const shift = buildShift(newDate, shiftCfg);
+    const leadHours = await this.settings.getInt('reschedule_lead_hours');
+    if (shift.start.getTime() < Date.now() + leadHours * 3600_000) {
+      throw new BadRequestException(
+        `Report impossible : un préavis minimum de ${leadHours}h est requis. ` +
+          'Choisissez une date / un créneau plus lointain.',
+      );
+    }
+
     const data: any = { requestedDate: newDate, shiftCode: newShiftCode };
     // RDV déjà affecté → on recale le créneau ferme sur la nouvelle date/shift.
     if (appt.offDockId && appt.slotStart) {
-      const shift = buildShift(newDate, shiftCfg);
       data.slotStart = shift.start;
       data.slotEnd = shift.end;
     }
@@ -269,6 +290,12 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_RESCHEDULE', id, {
       requestedDate: newDate.toISOString(), shift: newShiftCode,
     });
+    await this.notifyTransporter(
+      updated,
+      `RDV ${updated.reference} reporté`,
+      `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) ` +
+        `a été reporté au ${fmtD} · shift ${shiftCfg.label}.\n\ne-depot — MEDLOG Côte d'Ivoire`,
+    );
     return updated;
   }
 
@@ -412,6 +439,16 @@ export class AppointmentsService {
       include: this.include(),
     });
     await this.audit(user.id, 'APPOINTMENT_TRANSITION', id, { from, to });
+    if (to === 'CANCELLED' || to === 'REJECTED') {
+      const label = to === 'CANCELLED' ? 'annulé' : 'rejeté';
+      await this.notifyTransporter(
+        updated,
+        `RDV ${updated.reference} ${label}`,
+        `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été ${label}.` +
+          (note ? `\nMotif : ${note}` : '') +
+          `\n\ne-depot — MEDLOG Côte d'Ivoire`,
+      );
+    }
     return updated;
   }
 
@@ -419,5 +456,30 @@ export class AppointmentsService {
     await this.prisma.auditLog.create({
       data: { actorId, action, entity: 'Appointment', entityId, meta: JSON.stringify(meta) },
     });
+  }
+
+  /** Notifie le transporteur (créateur du RDV) par e-mail. Ne bloque jamais l'action métier. */
+  private async notifyTransporter(
+    appt: { createdById: string; reference: string; containerNumber: string },
+    subject: string,
+    text: string,
+  ) {
+    try {
+      if (!(await this.mail.isConfigured())) return; // SMTP non paramétré → on n'essaie pas
+      const creator = await this.prisma.user.findUnique({
+        where: { id: appt.createdById },
+        select: { email: true },
+      });
+      if (creator?.email) await this.mail.send(creator.email, subject, text);
+    } catch {
+      /* une notification ne doit jamais interrompre l'action métier */
+    }
+  }
+
+  private static fmtD(d: Date) {
+    return new Date(d).toLocaleDateString('fr-FR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  private static fmtH(d: Date) {
+    return new Date(d).toLocaleTimeString('fr-FR', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' });
   }
 }

@@ -15,6 +15,7 @@ import { ManifestModule } from './manifest/manifest.module';
 import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
 import { ReportsModule } from './reports/reports.module';
+import { MailModule } from './mail/mail.module';
 
 @Controller()
 class HealthController {
@@ -29,6 +30,7 @@ class HealthController {
     // Rate-limiting : 300 requêtes / minute / IP (généreux ; le login est plus strict).
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     PrismaModule,
+    MailModule,
     ContainersModule,
     SettingsModule,
     UsersModule,

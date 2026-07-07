@@ -7,6 +7,13 @@ type Settings = {
   lead_hours_default: string;
   propre_moyen_label: string;
   gate_grace_minutes: string;
+  reschedule_lead_hours: string;
+  smtp_from: string;
+  smtp_host: string;
+  smtp_port: string;
+  smtp_user: string;
+  smtp_password: string;
+  smtp_password_set?: boolean;
 };
 
 export default function SettingsAdmin() {
@@ -14,6 +21,8 @@ export default function SettingsAdmin() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
+  const [testTo, setTestTo] = useState('');
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     api<Settings>('/settings').then(setS);
@@ -34,17 +43,34 @@ export default function SettingsAdmin() {
     }
   }
 
+  async function sendTest() {
+    setMsg(''); setErr(''); setTesting(true);
+    try {
+      const r = await api<{ sent: boolean; to: string }>('/settings/smtp-test', {
+        method: 'POST',
+        body: JSON.stringify({ to: testTo || undefined }),
+      });
+      setMsg(`E-mail de test envoyé à ${r.to}.`);
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setTesting(false);
+    }
+  }
+
   if (!s) return <Layout title="Paramètres"><div className="page-center"><Loader /></div></Layout>;
 
   return (
-    <Layout title="Paramètres — délais de préavis">
+    <Layout title="Paramètres">
       {msg && <div className="alert ok">{msg}</div>}
       {err && <div className="alert error">{err}</div>}
-      <div className="alert info">
-        Délai minimum entre la <b>prise du rendez-vous</b> et le <b>créneau demandé</b>. Le délai renforcé
-        s'applique aux conteneurs dont le champ <b>« transporteur »</b> vaut <b>« propre moyen »</b> dans la base.
-      </div>
-      <form className="card pad-lg" onSubmit={save} style={{ maxWidth: 560 }}>
+
+      <form className="card pad-lg" onSubmit={save} style={{ maxWidth: 620 }}>
+        <h2 style={{ marginTop: 0 }}>Délais de préavis</h2>
+        <div className="alert info">
+          Délai minimum entre la <b>prise du rendez-vous</b> et le <b>créneau demandé</b>. Le délai renforcé
+          s'applique aux conteneurs dont le champ <b>« transporteur »</b> vaut <b>« propre moyen »</b> dans la base.
+        </div>
         <div className="row">
           <div className="field">
             <label>Préavis « propre moyen » (heures)</label>
@@ -71,6 +97,19 @@ export default function SettingsAdmin() {
           </div>
         </div>
 
+        <div className="field">
+          <label>Préavis de report par l'agent (heures)</label>
+          <input
+            type="number" min={0} max={2000}
+            value={s.reschedule_lead_hours}
+            onChange={(e) => setS({ ...s, reschedule_lead_hours: e.target.value })}
+          />
+          <div className="small muted" style={{ marginTop: 4 }}>
+            Un agent MEDLOG peut reporter un rendez-vous <b>même après affectation</b>, à condition que la nouvelle
+            date/créneau respecte ce préavis minimum. Mettez 0 pour l'autoriser sans délai.
+          </div>
+        </div>
+
         <div className="alert info" style={{ marginTop: 4 }}>
           <b>Contrôle d'entrée</b> — l'opérateur ne peut valider l'arrivée / le déchargement / la dépose d'un
           conteneur que pendant le créneau du rendez-vous, avec la tolérance ci-dessous.
@@ -87,7 +126,89 @@ export default function SettingsAdmin() {
           </div>
         </div>
 
-        <button className="btn" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+        <hr style={{ margin: '22px 0', border: 0, borderTop: '1px solid var(--line, #e0e0e0)' }} />
+
+        <h2>Serveur d'e-mails (SMTP)</h2>
+        <div className="alert info">
+          Configuration d'envoi des e-mails aux transporteurs (confirmation d'affectation, report, annulation).
+          Laissez le <b>serveur SMTP</b> vide pour désactiver les envois.
+        </div>
+        <div className="field">
+          <label>Adresse e-mail d'expédition</label>
+          <input
+            type="email"
+            placeholder="rdv@medlog.ci"
+            value={s.smtp_from}
+            onChange={(e) => setS({ ...s, smtp_from: e.target.value })}
+          />
+        </div>
+        <div className="row">
+          <div className="field">
+            <label>Serveur SMTP d'envoi</label>
+            <input
+              placeholder="smtp.medlog.ci"
+              value={s.smtp_host}
+              onChange={(e) => setS({ ...s, smtp_host: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Port SMTP</label>
+            <input
+              type="number" min={1} max={65535}
+              value={s.smtp_port}
+              onChange={(e) => setS({ ...s, smtp_port: e.target.value })}
+            />
+            <div className="small muted" style={{ marginTop: 4 }}>587 (STARTTLS) · 465 (TLS) · 25</div>
+          </div>
+        </div>
+        <div className="row">
+          <div className="field">
+            <label>Login SMTP</label>
+            <input
+              autoComplete="off"
+              placeholder="rdv@medlog.ci"
+              value={s.smtp_user}
+              onChange={(e) => setS({ ...s, smtp_user: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Mot de passe SMTP</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder={s.smtp_password_set ? '•••••••• (inchangé)' : 'mot de passe'}
+              value={s.smtp_password}
+              onChange={(e) => setS({ ...s, smtp_password: e.target.value })}
+            />
+            <div className="small muted" style={{ marginTop: 4 }}>
+              {s.smtp_password_set
+                ? 'Un mot de passe est déjà enregistré. Laissez vide pour le conserver.'
+                : 'Jamais réaffiché après enregistrement.'}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex" style={{ gap: 10, alignItems: 'flex-end', marginTop: 6 }}>
+          <div className="field" style={{ flex: 1, margin: 0 }}>
+            <label>Tester l'envoi vers</label>
+            <input
+              type="email"
+              placeholder="destinataire@exemple.ci (défaut : adresse d'expédition)"
+              value={testTo}
+              onChange={(e) => setTestTo(e.target.value)}
+            />
+          </div>
+          <button type="button" className="btn ghost" disabled={testing} onClick={sendTest}>
+            {testing ? 'Envoi…' : '✉ Envoyer un test'}
+          </button>
+        </div>
+        <div className="small muted" style={{ marginTop: 4 }}>
+          Enregistrez d'abord la configuration SMTP avant de tester.
+        </div>
+
+        <button className="btn" disabled={saving} style={{ marginTop: 18 }}>
+          {saving ? 'Enregistrement…' : 'Enregistrer'}
+        </button>
       </form>
     </Layout>
   );
