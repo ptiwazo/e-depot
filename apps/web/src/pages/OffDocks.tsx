@@ -128,14 +128,23 @@ export default function OffDocks() {
             <div className="field">
               <label>Capacité / jour</label>
               <input type="number" value={form.dailyCapacity} onChange={(e) => set('dailyCapacity', e.target.value)} />
+              <div className="small muted" style={{ marginTop: 4 }}>
+                Nombre maximum de conteneurs vides que ce site peut recevoir sur <b>une journée entière</b> (tous shifts confondus). Sert au taux d'occupation quotidien et à l'équilibrage de la charge entre sites.
+              </div>
             </div>
             <div className="field">
               <label>Capacité / shift</label>
               <input type="number" value={form.shiftCapacity} onChange={(e) => set('shiftCapacity', e.target.value)} />
+              <div className="small muted" style={{ marginTop: 4 }}>
+                Nombre maximum de conteneurs traitables sur <b>un seul poste horaire</b> (shift Jour ou Nuit). Évite de concentrer trop de rendez-vous sur le même créneau.
+              </div>
             </div>
             <div className="field">
               <label>Capacité de parc (camions simultanés)</label>
               <input type="number" min="1" value={form.parkingSlots} onChange={(e) => set('parkingSlots', e.target.value)} />
+              <div className="small muted" style={{ marginTop: 4 }}>
+                Nombre de camions que le parc peut accueillir <b>en même temps</b> (places physiques). Sert au calcul <b>automatique</b> de la congestion : camions présents ÷ places.
+              </div>
             </div>
           </div>
 
@@ -147,7 +156,6 @@ export default function OffDocks() {
             <button className="btn" disabled={busy}>{busy ? 'Création…' : 'Créer l\'OFF-DOCK'}</button>
           </div>
           <div className="small muted" style={{ marginTop: 8 }}>
-            La capacité de parc sert au calcul automatique de la congestion (camions présents / capacité).
             La position GPS sert au moteur d'affectation (distance depuis le Port d'Abidjan).
           </div>
         </form>
@@ -287,15 +295,15 @@ function OffDockCard({
 
       <div className="row">
         <div>
-          <label>Capacité / jour</label>
+          <label title="Conteneurs vides max reçus sur une journée entière (tous shifts confondus).">Capacité / jour ⓘ</label>
           <input type="number" value={draft.dailyCapacity} onChange={(e) => upd('dailyCapacity', e.target.value)} />
         </div>
         <div>
-          <label>Capacité / shift</label>
+          <label title="Conteneurs max traitables sur un seul poste horaire (shift Jour ou Nuit).">Capacité / shift ⓘ</label>
           <input type="number" value={draft.shiftCapacity} onChange={(e) => upd('shiftCapacity', e.target.value)} />
         </div>
         <div>
-          <label>Capacité de parc</label>
+          <label title="Camions accueillis simultanément (places physiques). Base du calcul automatique de la congestion.">Capacité de parc ⓘ</label>
           <input type="number" min="1" value={draft.parkingSlots} onChange={(e) => upd('parkingSlots', e.target.value)} />
         </div>
       </div>
