@@ -64,10 +64,16 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* Tendance 7 jours */}
-          <div className="card" style={{ marginTop: 16 }}>
-            <h2>Tendance — demandes créées (7 derniers jours)</h2>
-            <TrendChart trend={data.weeklyTrend} />
+          {/* Tendances : rétrospective (créées) & prospective (RDV validés à venir) */}
+          <div className="grid cols-2" style={{ marginTop: 16 }}>
+            <div className="card">
+              <h2>Tendance — demandes créées (7 derniers jours)</h2>
+              <TrendChart trend={data.weeklyTrend} />
+            </div>
+            <div className="card">
+              <h2>Tendance — RDV validés (7 prochains jours)</h2>
+              <TrendChart trend={data.upcomingTrend} color="#2e86c1" />
+            </div>
           </div>
 
           <div className="grid cols-2" style={{ marginTop: 16 }}>
@@ -164,8 +170,9 @@ export default function AdminDashboard() {
   );
 }
 
-/** Mini histogramme (CSS) des demandes créées sur 7 jours. */
-function TrendChart({ trend }: { trend: { date: string; count: number }[] }) {
+/** Mini histogramme (CSS) d'une série datée sur 7 jours. */
+function TrendChart({ trend, color }: { trend: { date: string; count: number }[]; color?: string }) {
+  const barColor = color ?? 'var(--yellow-strong, #e0a400)';
   const max = Math.max(1, ...trend.map((t) => t.count));
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 150, padding: '12px 4px 0' }}>
@@ -182,7 +189,7 @@ function TrendChart({ trend }: { trend: { date: string; count: number }[] }) {
               style={{
                 width: '100%',
                 height: `${Math.max(h, t.count ? 8 : 2)}%`,
-                background: t.count ? 'var(--yellow-strong, #e0a400)' : 'var(--grey-200, #e2e2e2)',
+                background: t.count ? barColor : 'var(--grey-200, #e2e2e2)',
                 borderRadius: '6px 6px 0 0',
                 transition: 'height .45s ease',
               }}

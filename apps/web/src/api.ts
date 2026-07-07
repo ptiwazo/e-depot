@@ -129,6 +129,7 @@ export interface Analytics {
   byStatus: Record<string, number>;
   byShiftToday: Record<string, number>;
   weeklyTrend: { date: string; count: number }[];
+  upcomingTrend: { date: string; count: number }[];
   topTransporters: { name: string; count: number }[];
   offDocks: { code: string; name: string; city: string; load: number; capacity: number; occupancy: number; congestion: number }[];
 }

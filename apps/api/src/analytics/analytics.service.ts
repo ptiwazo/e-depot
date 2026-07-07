@@ -98,6 +98,8 @@ export class AnalyticsService {
 
     // Tendance : RDV créés sur les 7 derniers jours.
     const weeklyTrend = await this.weeklyTrend(todayStart);
+    // Tendance prospective : RDV validés par date de rendez-vous sur les 7 prochains jours.
+    const upcomingTrend = await this.upcomingValidatedTrend(todayStart);
 
     // Top transporteurs (par volume de RDV).
     const topTransporters = await this.topTransporters();
@@ -120,6 +122,7 @@ export class AnalyticsService {
       byStatus: statusMap,
       byShiftToday,
       weeklyTrend,
+      upcomingTrend,
       topTransporters,
       offDocks,
     };
@@ -159,6 +162,30 @@ export class AnalyticsService {
       const next = new Date(d);
       next.setDate(d.getDate() + 1);
       const count = rows.filter((r) => r.createdAt >= d && r.createdAt < next).length;
+      trend.push({ date: d.toISOString().slice(0, 10), count });
+    }
+    return trend;
+  }
+
+  /** RDV validés par date de rendez-vous sur les 7 prochains jours (aujourd'hui inclus). */
+  private async upcomingValidatedTrend(todayStart: Date): Promise<{ date: string; count: number }[]> {
+    const in7 = new Date(todayStart);
+    in7.setDate(in7.getDate() + 7);
+    const rows = await this.prisma.appointment.findMany({
+      where: {
+        requestedDate: { gte: todayStart, lt: in7 },
+        // « validés » = passés la validation (en attente d'affectation et au-delà).
+        status: { in: ['VALIDATED', 'ASSIGNED', 'CONFIRMED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'] },
+      },
+      select: { requestedDate: true },
+    });
+    const trend: { date: string; count: number }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(todayStart);
+      d.setDate(d.getDate() + i);
+      const next = new Date(d);
+      next.setDate(d.getDate() + 1);
+      const count = rows.filter((r) => r.requestedDate >= d && r.requestedDate < next).length;
       trend.push({ date: d.toISOString().slice(0, 10), count });
     }
     return trend;
