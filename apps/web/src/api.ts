@@ -111,6 +111,24 @@ export interface Appointment {
   recommendation?: { offDockId: string; offDockCode: string; score: number } | null;
 }
 
+export interface AiInsight {
+  level: 'crit' | 'warn' | 'info' | 'good';
+  title: string;
+  detail: string;
+}
+
+export interface AiInsights {
+  generatedAt: string;
+  configured: boolean;
+  model: string | null;
+  metrics: Record<string, number>;
+  alerts: AiInsight[];
+  recommendations: string[];
+  highlights: AiInsight[];
+  briefing: string | null;
+  briefingError: string | null;
+}
+
 export interface Analytics {
   total: number;
   completedToday: number;

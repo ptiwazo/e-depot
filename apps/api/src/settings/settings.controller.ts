@@ -39,11 +39,11 @@ export class SettingsController {
           throw new BadRequestException('Port SMTP invalide (1–65535).');
         }
         await this.settings.set(key, String(n));
-      } else if (key === 'smtp_password') {
-        // Champ masqué : on ne met à jour que si une nouvelle valeur est fournie.
+      } else if (key === 'smtp_password' || key === 'ai_api_key') {
+        // Secret masqué : on ne met à jour que si une nouvelle valeur est fournie.
         if (raw) await this.settings.set(key, raw);
-      } else if (key.startsWith('smtp_')) {
-        // Champs SMTP facultatifs : vide autorisé (= désactive l'envoi).
+      } else if (key.startsWith('smtp_') || key.startsWith('ai_')) {
+        // Champs SMTP / IA facultatifs : vide autorisé (= fonctionnalité désactivée).
         await this.settings.set(key, raw);
       } else {
         if (!raw) throw new BadRequestException(`Valeur vide interdite pour « ${key} ».`);
@@ -67,9 +67,15 @@ export class SettingsController {
     return { sent: true, to };
   }
 
-  /** Réponse publique : le mot de passe SMTP n'est jamais renvoyé (seulement un indicateur). */
+  /** Réponse publique : les secrets (mot de passe SMTP, clé API IA) ne sont jamais renvoyés. */
   private async publicSettings() {
     const all = await this.settings.getAll();
-    return { ...all, smtp_password: '', smtp_password_set: !!all.smtp_password };
+    return {
+      ...all,
+      smtp_password: '',
+      smtp_password_set: !!all.smtp_password,
+      ai_api_key: '',
+      ai_api_key_set: !!all.ai_api_key,
+    };
   }
 }

@@ -16,6 +16,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
 import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './mail/mail.module';
+import { AiModule } from './ai/ai.module';
 
 @Controller()
 class HealthController {
@@ -43,6 +44,7 @@ class HealthController {
     ManifestModule,
     AuditModule,
     ReportsModule,
+    AiModule,
   ],
   controllers: [HealthController],
   providers: [

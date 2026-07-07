@@ -14,6 +14,9 @@ type Settings = {
   smtp_user: string;
   smtp_password: string;
   smtp_password_set?: boolean;
+  ai_api_key: string;
+  ai_model: string;
+  ai_api_key_set?: boolean;
 };
 
 export default function SettingsAdmin() {
@@ -204,6 +207,38 @@ export default function SettingsAdmin() {
         </div>
         <div className="small muted" style={{ marginTop: 4 }}>
           Enregistrez d'abord la configuration SMTP avant de tester.
+        </div>
+
+        <hr style={{ margin: '22px 0', border: 0, borderTop: '1px solid var(--line, #e0e0e0)' }} />
+
+        <h2>Assistant IA d'exploitation</h2>
+        <div className="alert info">
+          Active la <b>synthèse en langage naturel</b> du <b>Tableau de bord IA</b> (analyse, risques, actions)
+          via l'API Claude d'Anthropic. Sans clé, l'Assistant IA reste disponible en <b>mode déterministe</b>
+          (alertes et recommandations calculées automatiquement).
+        </div>
+        <div className="field">
+          <label>Clé API Claude (Anthropic)</label>
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder={s.ai_api_key_set ? '•••••••• (inchangée)' : 'sk-ant-...'}
+            value={s.ai_api_key}
+            onChange={(e) => setS({ ...s, ai_api_key: e.target.value })}
+          />
+          <div className="small muted" style={{ marginTop: 4 }}>
+            {s.ai_api_key_set
+              ? 'Une clé est déjà enregistrée. Laissez vide pour la conserver.'
+              : 'Jamais réaffichée après enregistrement. Obtenue sur console.anthropic.com.'}
+          </div>
+        </div>
+        <div className="field">
+          <label>Modèle Claude</label>
+          <select value={s.ai_model} onChange={(e) => setS({ ...s, ai_model: e.target.value })}>
+            <option value="claude-sonnet-5">Claude Sonnet 5 (équilibré — recommandé)</option>
+            <option value="claude-opus-4-8">Claude Opus 4.8 (le plus puissant)</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (rapide / économique)</option>
+          </select>
         </div>
 
         <button className="btn" disabled={saving} style={{ marginTop: 18 }}>

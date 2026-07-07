@@ -14,6 +14,9 @@ export const SETTING_DEFAULTS = {
   smtp_port: '587', // port SMTP
   smtp_user: '', // login SMTP
   smtp_password: '', // mot de passe SMTP
+  // Assistant IA d'exploitation (synthèse en langage naturel via l'API Claude ; vide = mode déterministe seul).
+  ai_api_key: '', // clé API Anthropic
+  ai_model: 'claude-sonnet-5', // modèle Claude utilisé pour la synthèse
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
