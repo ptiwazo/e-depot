@@ -121,7 +121,7 @@ export interface Analytics {
   offDocks: { code: string; name: string; city: string; load: number; capacity: number; occupancy: number; congestion: number }[];
 }
 
-const TOKEN_KEY = 'edepot_token';
+export const TOKEN_KEY = 'edepot_token';
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -142,6 +142,14 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
 
   const res = await fetch(`${API_BASE}/api${path}`, { ...options, headers });
   if (!res.ok) {
+    // Token présent mais rejeté (401) = session invalide/expirée (ou basculée sur un
+    // autre compte dans un autre onglet). On purge et on renvoie vers la connexion
+    // pour éviter un état « connecté » incohérent.
+    if (res.status === 401 && token) {
+      setToken(null);
+      const loginUrl = import.meta.env.BASE_URL + 'login';
+      if (!window.location.pathname.endsWith('/login')) window.location.assign(loginUrl);
+    }
     let message = `Erreur ${res.status}`;
     try {
       const body = await res.json();
