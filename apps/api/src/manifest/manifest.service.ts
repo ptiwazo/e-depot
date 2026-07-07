@@ -1,5 +1,4 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { validateContainer } from '../domain/container';
 import { isValidSizeType, normalizeSizeType } from '../domain/sizetype';
 import {
   CONTAINER_REPOSITORY,
@@ -103,16 +102,17 @@ export class ManifestService {
   private normalizeRow(row: ManifestRow): { data?: ContainerRecord; error?: string } {
     const containerNumber = (row.containerNumber || '').replace(/\s+/g, '').toUpperCase();
     const blNumber = (row.blNumber || '').trim().toUpperCase();
+    // Seule exigence : un couple (conteneur, BL) exploitable comme clé d'upsert.
     if (!containerNumber || !blNumber) return { error: 'Conteneur et BL requis' };
 
-    const check = validateContainer(containerNumber);
-    if (!check.valid) return { error: check.reason || 'Numéro de conteneur invalide' };
-    if (!check.isMsc) return { error: 'Conteneur non-MSC (hors périmètre)' };
-
-    const containerType = normalizeSizeType(row.containerType || '20DV');
-    if (!isValidSizeType(containerType)) {
-      return { error: `Code taille-type invalide : ${containerType} (ex. attendu 20DV, 40HC, 40HR, 45HC)` };
-    }
+    // On intègre TOUTE la base : conteneurs MSC comme non-MSC. La règle de
+    // propriété MSC et la clé ISO 6346 ne sont plus bloquantes à l'import.
+    // Le code taille-type est normalisé mais accepté tel quel s'il est hors
+    // référentiel (repli sur 20DV seulement si vide/illisible).
+    const normalizedType = normalizeSizeType(row.containerType || '20DV');
+    const containerType = isValidSizeType(normalizedType)
+      ? normalizedType
+      : normalizedType || '20DV';
 
     return {
       data: {
