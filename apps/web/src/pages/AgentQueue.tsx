@@ -13,15 +13,20 @@ export default function AgentQueue() {
   // Report en cours d'édition : { [id]: { date, shift } }
   const [reschedule, setReschedule] = useState<Record<string, { date: string; shift: string }>>({});
 
-  function load() {
-    api<Appointment[]>('/appointments/pending').then((list) => {
-      setItems(list);
-      const pre: Record<string, string> = {};
-      list.forEach((a) => {
-        if (a.recommendation) pre[a.id] = a.recommendation.offDockId;
-      });
-      setChoice((c) => ({ ...pre, ...c }));
+  function applyPending(list: Appointment[]) {
+    setItems(list);
+    const pre: Record<string, string> = {};
+    list.forEach((a) => {
+      if (a.recommendation) pre[a.id] = a.recommendation.offDockId;
     });
+    setChoice((c) => ({ ...pre, ...c }));
+  }
+  // Après une action, on ne recharge QUE la file (les OFF-DOCK et shifts ne changent pas).
+  function refreshPending() {
+    return api<Appointment[]>('/appointments/pending').then(applyPending);
+  }
+  function load() {
+    refreshPending();
     api<OffDock[]>('/offdocks').then((d) => setDocks(d.filter((x) => x.active)));
     api<Shift[]>('/shifts').then(setShifts);
   }
@@ -42,7 +47,8 @@ export default function AgentQueue() {
         body: JSON.stringify({ offDockId }),
       });
       setMsg(`${res.reference} affecté à ${res.offDock?.code}.`);
-      load();
+      setItems((prev) => prev.filter((x) => x.id !== a.id)); // retrait immédiat de la file
+      refreshPending();
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -61,7 +67,8 @@ export default function AgentQueue() {
         body: JSON.stringify({ to: 'CANCELLED', note: 'Annulé par un agent MEDLOG (capacité OFF-DOCK)' }),
       });
       setMsg(`${a.reference} annulé.`);
-      load();
+      setItems((prev) => prev.filter((x) => x.id !== a.id)); // retrait immédiat de la file
+      refreshPending();
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -102,7 +109,7 @@ export default function AgentQueue() {
       });
       setMsg(`${a.reference} reporté au ${new Date(edit.date).toLocaleDateString('fr-FR')}.`);
       closeReschedule(a.id);
-      load();
+      refreshPending();
     } catch (e: any) {
       setErr(e.message);
     } finally {

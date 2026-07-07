@@ -149,27 +149,81 @@ export class AppointmentsService {
     return appt;
   }
 
-  /** File d'affectation : demandes validées en attente d'un OFF-DOCK, avec recommandation. */
+  /**
+   * File d'affectation : demandes validées en attente d'un OFF-DOCK, avec recommandation.
+   *
+   * PERF : au lieu de rejouer le moteur (offdocks + charge du jour + congestion) POUR CHAQUE
+   * demande — ce qui faisait ~5N+1 requêtes vers la base — on précalcule TOUT une seule fois
+   * (état des sites, distances, congestion, charge sur la fenêtre de dates), puis on calcule
+   * chaque recommandation en mémoire via `selectOffDockForShift` (fonction pure).
+   */
   async pending() {
     const appts = await this.prisma.appointment.findMany({
       where: { status: { in: ['REQUESTED', 'VALIDATED'] } },
       include: this.include(),
       orderBy: { createdAt: 'asc' },
     });
-    const recos = await Promise.all(appts.map((a) => this.recommend(a)));
-    return appts.map((a, i) => ({ ...a, recommendation: recos[i] }));
-  }
+    if (!appts.length) return [];
 
-  /** Recommandation du moteur pour une demande (meilleur OFF-DOCK sur le shift demandé). */
-  private async recommend(appt: { requestedDate: Date; shiftCode: string | null; containerType: string }) {
-    if (!appt.shiftCode) return null;
-    const shiftCfg = await this.prisma.shift.findUnique({ where: { code: appt.shiftCode } });
-    if (!shiftCfg) return null;
-    const shift = buildShift(appt.requestedDate, shiftCfg);
-    const reco = await this.computeAssignment(shift, appt.containerType);
-    return reco
-      ? { offDockId: reco.offDockId, offDockCode: reco.offDockCode, score: reco.score }
-      : null;
+    // Données partagées récupérées une seule fois.
+    const [docks, shifts, congestion] = await Promise.all([
+      this.prisma.offDock.findMany({ where: { active: true } }),
+      this.prisma.shift.findMany(),
+      computeCongestion(this.prisma),
+    ]);
+    const shiftMap = new Map(shifts.map((s) => [s.code, s]));
+    const distance = new Map(docks.map((d) => [d.id, haversineKm(PORT_ABIDJAN, { lat: d.lat, lng: d.lng })]));
+
+    // Charge planifiée sur la fenêtre couvrant toutes les demandes (une seule requête).
+    const times = appts.map((a) => a.requestedDate.getTime());
+    const winStart = new Date(Math.min(...times));
+    winStart.setHours(0, 0, 0, 0);
+    const winEnd = new Date(Math.max(...times));
+    winEnd.setHours(0, 0, 0, 0);
+    winEnd.setDate(winEnd.getDate() + 2); // marge pour les shifts de nuit qui débordent
+    const windowAppts = await this.prisma.appointment.findMany({
+      where: { slotStart: { gte: winStart, lt: winEnd }, status: { in: ACTIVE_STATUSES } },
+      select: { offDockId: true, slotStart: true },
+    });
+
+    const recos = appts.map((a) => {
+      const cfg = a.shiftCode ? shiftMap.get(a.shiftCode) : null;
+      if (!cfg) return null;
+      const shift = buildShift(a.requestedDate, cfg);
+      const dayStart = new Date(shift.start);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+      const dayOwn = windowAppts.filter((x) => x.slotStart && x.slotStart >= dayStart && x.slotStart < dayEnd);
+
+      const states: OffDockState[] = docks.map((d) => {
+        const own = dayOwn.filter((x) => x.offDockId === d.id);
+        const shiftLoads: Record<string, number> = {};
+        for (const x of own) {
+          if (x.slotStart) {
+            const key = x.slotStart.toISOString();
+            shiftLoads[key] = (shiftLoads[key] ?? 0) + 1;
+          }
+        }
+        return {
+          id: d.id,
+          code: d.code,
+          dailyCapacity: d.dailyCapacity,
+          shiftCapacity: d.shiftCapacity,
+          congestion: congestion[d.id]?.congestion ?? 0,
+          acceptsReefer: d.acceptsReefer,
+          active: d.active,
+          distanceKm: distance.get(d.id) ?? 0,
+          dailyLoad: own.length,
+          shiftLoads,
+        };
+      });
+
+      const reco = selectOffDockForShift(states, shift, a.containerType);
+      return reco ? { offDockId: reco.offDockId, offDockCode: reco.offDockCode, score: reco.score } : null;
+    });
+
+    return appts.map((a, i) => ({ ...a, recommendation: recos[i] }));
   }
 
   /**
@@ -297,50 +351,6 @@ export class AppointmentsService {
         `a été reporté au ${fmtD} · shift ${shiftCfg.label}.\n\ne-depot — MEDLOG Côte d'Ivoire`,
     );
     return updated;
-  }
-
-  /** Construit l'état des OFF-DOCK pour le shift visé et lance le moteur. */
-  private async computeAssignment(shift: { start: Date; end: Date; code: string; label: string }, containerType: string) {
-    const dayStart = new Date(shift.start);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
-
-    const docks = await this.prisma.offDock.findMany({ where: { active: true } });
-    const appts = await this.prisma.appointment.findMany({
-      where: {
-        slotStart: { gte: dayStart, lt: dayEnd },
-        status: { in: ACTIVE_STATUSES },
-      },
-      select: { offDockId: true, slotStart: true },
-    });
-    // Congestion calculée automatiquement (état réel du parc).
-    const congestion = await computeCongestion(this.prisma);
-
-    const states: OffDockState[] = docks.map((d) => {
-      const own = appts.filter((a) => a.offDockId === d.id);
-      const shiftLoads: Record<string, number> = {};
-      for (const a of own) {
-        if (a.slotStart) {
-          const key = a.slotStart.toISOString();
-          shiftLoads[key] = (shiftLoads[key] ?? 0) + 1;
-        }
-      }
-      return {
-        id: d.id,
-        code: d.code,
-        dailyCapacity: d.dailyCapacity,
-        shiftCapacity: d.shiftCapacity,
-        congestion: congestion[d.id]?.congestion ?? 0,
-        acceptsReefer: d.acceptsReefer,
-        active: d.active,
-        distanceKm: haversineKm(PORT_ABIDJAN, { lat: d.lat, lng: d.lng }),
-        dailyLoad: own.length,
-        shiftLoads,
-      };
-    });
-
-    return selectOffDockForShift(states, shift, containerType);
   }
 
   private include() {
