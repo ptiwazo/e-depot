@@ -45,7 +45,7 @@ export class WhatsappService {
     try {
       const params = new URLSearchParams({ token, to, body });
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 20000);
+      const timer = setTimeout(() => controller.abort(), 12000);
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -58,7 +58,7 @@ export class WhatsappService {
       if (json?.sent === 'true' || json?.sent === true || json?.id) return { ok: true };
       return { ok: false, error: json?.error || json?.message || `HTTP ${res.status}` };
     } catch (e: any) {
-      const error = e?.name === 'AbortError' ? 'délai dépassé (20s)' : e?.message ?? 'erreur inconnue';
+      const error = e?.name === 'AbortError' ? 'délai dépassé (12s)' : e?.message ?? 'erreur inconnue';
       this.logger.warn(`WhatsApp échec (${to}) : ${error}`);
       return { ok: false, error };
     }

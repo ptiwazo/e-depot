@@ -272,7 +272,9 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_ASSIGN', id, { offDock: offDock.code, shift: shift.code });
     {
       const dateStr = `${AppointmentsService.fmtD(shift.start)} · ${shift.label} (${AppointmentsService.fmtH(shift.start)}–${AppointmentsService.fmtH(shift.end)})`;
-      await this.notify(updated, {
+      // Notifications en arrière-plan (fire-and-forget) : ne JAMAIS bloquer la réponse
+      // sur des appels externes (WhatsApp/e-mail), sinon l'action semble planter.
+      void this.notify(updated, {
         emailSubject: `RDV ${updated.reference} confirmé — ${offDock.code}`,
         emailBody:
           `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été affecté.\n` +
@@ -468,7 +470,9 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_TRANSITION', id, { from, to });
     if (to === 'CANCELLED' || to === 'REJECTED') {
       const label = to === 'CANCELLED' ? 'annulé' : 'rejeté';
-      await this.notify(updated, {
+      // Notifications en arrière-plan (fire-and-forget) : ne JAMAIS bloquer la réponse
+      // sur des appels externes (WhatsApp/e-mail), sinon l'action semble planter.
+      void this.notify(updated, {
         emailSubject: `RDV ${updated.reference} ${label}`,
         emailBody:
           `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été ${label}.` +
