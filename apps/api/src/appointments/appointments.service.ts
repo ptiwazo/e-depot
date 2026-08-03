@@ -348,7 +348,9 @@ export class AppointmentsService {
       updated,
       `RDV ${updated.reference} reporté`,
       `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) ` +
-        `a été reporté au ${fmtD} · shift ${shiftCfg.label}.\n\ne-depot — MEDLOG Côte d'Ivoire`,
+        `a été reporté au ${fmtD} · shift ${shiftCfg.label}.` +
+        (dto.note ? `\nMotif : ${dto.note}` : '') +
+        `\n\ne-depot — MEDLOG Côte d'Ivoire`,
     );
     return updated;
   }

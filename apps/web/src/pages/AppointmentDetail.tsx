@@ -19,9 +19,14 @@ export default function AppointmentDetail() {
   useEffect(load, [id]);
 
   async function cancel() {
-    if (!confirm('Annuler ce rendez-vous ?')) return;
+    const motif = window.prompt('Motif de l’annulation de ce rendez-vous :', '');
+    if (motif === null) return; // annulation abandonnée
+    if (!motif.trim()) {
+      setError('Le motif est obligatoire pour annuler.');
+      return;
+    }
     try {
-      await api(`/appointments/${id}/transition`, { method: 'POST', body: JSON.stringify({ to: 'CANCELLED', note: 'Annulé par le transporteur' }) });
+      await api(`/appointments/${id}/transition`, { method: 'POST', body: JSON.stringify({ to: 'CANCELLED', note: motif.trim() }) });
       load();
     } catch (e: any) {
       setError(e.message);

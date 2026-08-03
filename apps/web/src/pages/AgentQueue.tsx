@@ -11,7 +11,7 @@ export default function AgentQueue() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   // Report en cours d'édition : { [id]: { date, shift } }
-  const [reschedule, setReschedule] = useState<Record<string, { date: string; shift: string }>>({});
+  const [reschedule, setReschedule] = useState<Record<string, { date: string; shift: string; motif: string }>>({});
 
   function applyPending(list: Appointment[]) {
     setItems(list);
@@ -57,14 +57,22 @@ export default function AgentQueue() {
   }
 
   async function cancel(a: Appointment) {
-    if (!window.confirm(`Annuler la demande ${a.reference} ? Le transporteur devra en refaire une.`)) return;
+    const motif = window.prompt(
+      `Motif de l'annulation de ${a.reference} (communiqué au transporteur) :`,
+      '',
+    );
+    if (motif === null) return; // annulation abandonnée
+    if (!motif.trim()) {
+      setErr("Le motif est obligatoire pour annuler (il est communiqué au transporteur).");
+      return;
+    }
     setBusy(a.id);
     setErr('');
     setMsg('');
     try {
       await api(`/appointments/${a.id}/transition`, {
         method: 'POST',
-        body: JSON.stringify({ to: 'CANCELLED', note: 'Annulé par un agent MEDLOG (capacité OFF-DOCK)' }),
+        body: JSON.stringify({ to: 'CANCELLED', note: motif.trim() }),
       });
       setMsg(`${a.reference} annulé.`);
       setItems((prev) => prev.filter((x) => x.id !== a.id)); // retrait immédiat de la file
@@ -79,7 +87,7 @@ export default function AgentQueue() {
   function openReschedule(a: Appointment) {
     setReschedule((r) => ({
       ...r,
-      [a.id]: { date: new Date(a.requestedDate).toISOString().slice(0, 10), shift: a.shiftCode ?? '' },
+      [a.id]: { date: new Date(a.requestedDate).toISOString().slice(0, 10), shift: a.shiftCode ?? '', motif: '' },
     }));
   }
   function closeReschedule(id: string) {
@@ -105,6 +113,7 @@ export default function AgentQueue() {
         body: JSON.stringify({
           requestedDate: new Date(edit.date + 'T00:00:00.000Z').toISOString(),
           shiftCode: edit.shift,
+          note: edit.motif?.trim() || undefined,
         }),
       });
       setMsg(`${a.reference} reporté au ${new Date(edit.date).toLocaleDateString('fr-FR')}.`);
@@ -203,6 +212,14 @@ export default function AgentQueue() {
                               <option key={s.code} value={s.code}>{s.label} ({s.startTime}-{s.endTime})</option>
                             ))}
                           </select>
+                        </div>
+                        <input
+                          style={{ marginTop: 6, width: '100%' }}
+                          placeholder="Motif du report (communiqué au transporteur)"
+                          value={editing.motif}
+                          onChange={(e) => setReschedule((r) => ({ ...r, [a.id]: { ...r[a.id], motif: e.target.value } }))}
+                        />
+                        <div className="flex" style={{ gap: 6, marginTop: 6 }}>
                           <button className="btn sm" disabled={busy === a.id} onClick={() => submitReschedule(a)}>
                             {busy === a.id ? '…' : 'Valider le report'}
                           </button>
