@@ -626,7 +626,7 @@ export class AppointmentsService {
         `Transporteur : ${appt.company?.name ?? '—'}\n` +
         `Conteneur : ${appt.containerNumber} (${appt.containerType}) · BL ${appt.blNumber}\n` +
         `Souhait : ${AppointmentsService.fmtD(appt.requestedDate)} · shift ${appt.shiftCode ?? '—'}\n` +
-        `➡️ À affecter : https://e-depot.netlify.app/e-depot/agent\n` +
+        `➡️ Ouvrir l'application : https://ci-apps.medlog.com/e-depot\n` +
         `Vous pouvez répondre à ce message pour coordonner.`;
       for (const to of numbers) await this.whatsapp.send(to, body);
     } catch {
