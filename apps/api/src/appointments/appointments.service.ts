@@ -356,7 +356,8 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_RESCHEDULE', id, {
       requestedDate: newDate.toISOString(), shift: newShiftCode,
     });
-    await this.notify(updated, {
+    // Notifications en arrière-plan (fire-and-forget) : ne JAMAIS bloquer la réponse.
+    void this.notify(updated, {
       emailSubject: `RDV ${updated.reference} reporté`,
       emailBody:
         `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) ` +
