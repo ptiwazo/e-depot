@@ -24,6 +24,11 @@ export class MailService {
       port,
       secure: port === 465, // 465 = TLS implicite ; 587/25 = STARTTLS
       auth: user ? { user, pass } : undefined,
+      // Timeouts courts : un serveur SMTP injoignable (ex. relais interne non
+      // accessible depuis le cloud) ne doit JAMAIS faire traîner l'envoi.
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 8000,
     });
   }
 
