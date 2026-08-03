@@ -17,6 +17,7 @@ import { AuditInterceptor } from './audit/audit.interceptor';
 import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './mail/mail.module';
 import { AiModule } from './ai/ai.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
 
 @Controller()
 class HealthController {
@@ -32,6 +33,7 @@ class HealthController {
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 300 }]),
     PrismaModule,
     MailModule,
+    WhatsappModule,
     ContainersModule,
     SettingsModule,
     UsersModule,

@@ -1,7 +1,8 @@
 import { BadRequestException, Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
-import { IsEmail, IsOptional } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 import { SettingsService, SETTING_KEYS, SettingKey } from './settings.service';
 import { MailService } from '../mail/mail.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles';
@@ -10,11 +11,19 @@ class SmtpTestDto {
   @IsOptional() @IsEmail() to?: string;
 }
 
+class WhatsappTestDto {
+  @IsString() to!: string;
+}
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('settings')
 export class SettingsController {
-  constructor(private settings: SettingsService, private mail: MailService) {}
+  constructor(
+    private settings: SettingsService,
+    private mail: MailService,
+    private whatsapp: WhatsappService,
+  ) {}
 
   @Get()
   getAll() {
@@ -39,11 +48,11 @@ export class SettingsController {
           throw new BadRequestException('Port SMTP invalide (1–65535).');
         }
         await this.settings.set(key, String(n));
-      } else if (key === 'smtp_password' || key === 'ai_api_key') {
+      } else if (key === 'smtp_password' || key === 'ai_api_key' || key === 'whatsapp_token') {
         // Secret masqué : on ne met à jour que si une nouvelle valeur est fournie.
         if (raw) await this.settings.set(key, raw);
-      } else if (key.startsWith('smtp_') || key.startsWith('ai_')) {
-        // Champs SMTP / IA facultatifs : vide autorisé (= fonctionnalité désactivée).
+      } else if (key.startsWith('smtp_') || key.startsWith('ai_') || key.startsWith('whatsapp_')) {
+        // Champs SMTP / IA / WhatsApp facultatifs : vide autorisé (= fonctionnalité désactivée).
         await this.settings.set(key, raw);
       } else {
         if (!raw) throw new BadRequestException(`Valeur vide interdite pour « ${key} ».`);
@@ -67,6 +76,18 @@ export class SettingsController {
     return { sent: true, to };
   }
 
+  // Envoi d'un message WhatsApp de test avec la configuration UltraMsg courante.
+  @Post('whatsapp-test')
+  async whatsappTest(@Body() dto: WhatsappTestDto) {
+    if (!dto.to?.trim()) throw new BadRequestException('Numéro de destination requis.');
+    const res = await this.whatsapp.send(
+      dto.to.trim(),
+      'e-depot (MEDLOG) — test de configuration WhatsApp. Si vous recevez ce message, la connexion UltraMsg fonctionne.',
+    );
+    if (!res.ok) throw new BadRequestException(`Échec de l'envoi : ${res.error}`);
+    return { sent: true, to: dto.to.trim() };
+  }
+
   /** Réponse publique : les secrets (mot de passe SMTP, clé API IA) ne sont jamais renvoyés. */
   private async publicSettings() {
     const all = await this.settings.getAll();
@@ -76,6 +97,8 @@ export class SettingsController {
       smtp_password_set: !!all.smtp_password,
       ai_api_key: '',
       ai_api_key_set: !!all.ai_api_key,
+      whatsapp_token: '',
+      whatsapp_token_set: !!all.whatsapp_token,
     };
   }
 }

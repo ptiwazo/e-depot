@@ -17,6 +17,9 @@ type Settings = {
   ai_api_key: string;
   ai_model: string;
   ai_api_key_set?: boolean;
+  whatsapp_api_url: string;
+  whatsapp_token: string;
+  whatsapp_token_set?: boolean;
 };
 
 export default function SettingsAdmin() {
@@ -26,6 +29,8 @@ export default function SettingsAdmin() {
   const [saving, setSaving] = useState(false);
   const [testTo, setTestTo] = useState('');
   const [testing, setTesting] = useState(false);
+  const [waTo, setWaTo] = useState('');
+  const [waTesting, setWaTesting] = useState(false);
 
   useEffect(() => {
     api<Settings>('/settings').then(setS);
@@ -58,6 +63,23 @@ export default function SettingsAdmin() {
       setErr(e.message);
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function sendWaTest() {
+    setMsg(''); setErr('');
+    if (!waTo.trim()) { setErr('Renseignez un numéro de test WhatsApp.'); return; }
+    setWaTesting(true);
+    try {
+      const r = await api<{ sent: boolean; to: string }>('/settings/whatsapp-test', {
+        method: 'POST',
+        body: JSON.stringify({ to: waTo.trim() }),
+      });
+      setMsg(`Message WhatsApp de test envoyé à ${r.to}.`);
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setWaTesting(false);
     }
   }
 
@@ -207,6 +229,53 @@ export default function SettingsAdmin() {
         </div>
         <div className="small muted" style={{ marginTop: 4 }}>
           Enregistrez d'abord la configuration SMTP avant de tester.
+        </div>
+
+        <hr style={{ margin: '22px 0', border: 0, borderTop: '1px solid var(--line, #e0e0e0)' }} />
+
+        <h2>Notifications WhatsApp (UltraMsg)</h2>
+        <div className="alert info">
+          Envoie un message WhatsApp au <b>chauffeur</b> et au <b>transporteur</b> à l'<b>affectation</b>,
+          au <b>report</b> et à l'<b>annulation</b> d'un rendez-vous. Laissez le <b>token</b> vide pour désactiver.
+        </div>
+        <div className="field">
+          <label>URL de l'instance UltraMsg</label>
+          <input
+            placeholder="https://api.ultramsg.com/instanceXXXXX/"
+            value={s.whatsapp_api_url}
+            onChange={(e) => setS({ ...s, whatsapp_api_url: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>Token UltraMsg</label>
+          <input
+            type="password"
+            autoComplete="new-password"
+            placeholder={s.whatsapp_token_set ? '•••••••• (inchangé)' : 'token de l\'instance'}
+            value={s.whatsapp_token}
+            onChange={(e) => setS({ ...s, whatsapp_token: e.target.value })}
+          />
+          <div className="small muted" style={{ marginTop: 4 }}>
+            {s.whatsapp_token_set
+              ? 'Un token est déjà enregistré. Laissez vide pour le conserver.'
+              : 'Jamais réaffiché après enregistrement.'}
+          </div>
+        </div>
+        <div className="flex" style={{ gap: 10, alignItems: 'flex-end', marginTop: 6 }}>
+          <div className="field" style={{ flex: 1, margin: 0 }}>
+            <label>Tester l'envoi vers (numéro)</label>
+            <input
+              placeholder="+2250707776408"
+              value={waTo}
+              onChange={(e) => setWaTo(e.target.value)}
+            />
+          </div>
+          <button type="button" className="btn ghost" disabled={waTesting} onClick={sendWaTest}>
+            {waTesting ? 'Envoi…' : '✆ Envoyer un test'}
+          </button>
+        </div>
+        <div className="small muted" style={{ marginTop: 4 }}>
+          Enregistrez d'abord le token avant de tester. Numéros acceptés : +225… ou format local (0707…).
         </div>
 
         <hr style={{ margin: '22px 0', border: 0, borderTop: '1px solid var(--line, #e0e0e0)' }} />

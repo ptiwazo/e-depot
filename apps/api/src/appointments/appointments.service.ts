@@ -24,6 +24,7 @@ import { haversineKm, PORT_ABIDJAN } from './geo';
 import { computeCongestion } from '../offdocks/congestion';
 import { AuthUser } from '../common/current-user.decorator';
 import { MailService } from '../mail/mail.service';
+import { WhatsappService, normalizeCIPhone } from '../whatsapp/whatsapp.service';
 
 const ACTIVE_STATUSES = ['ASSIGNED', 'CONFIRMED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
 
@@ -34,6 +35,7 @@ export class AppointmentsService {
     @Inject(CONTAINER_REPOSITORY) private readonly containers: ContainerRepository,
     private readonly settings: SettingsService,
     private readonly mail: MailService,
+    private readonly whatsapp: WhatsappService,
   ) {}
 
   private ref(): string {
@@ -268,15 +270,23 @@ export class AppointmentsService {
       include: this.include(),
     });
     await this.audit(user.id, 'APPOINTMENT_ASSIGN', id, { offDock: offDock.code, shift: shift.code });
-    await this.notifyTransporter(
-      updated,
-      `RDV ${updated.reference} confirmé — ${offDock.code}`,
-      `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été affecté.\n` +
-        `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
-        `Créneau : le ${AppointmentsService.fmtD(shift.start)} · ${shift.label} ` +
-        `(${AppointmentsService.fmtH(shift.start)}–${AppointmentsService.fmtH(shift.end)})\n\n` +
-        `Présentez le QR code de votre demande au portail du site.\n\ne-depot — MEDLOG Côte d'Ivoire`,
-    );
+    {
+      const dateStr = `${AppointmentsService.fmtD(shift.start)} · ${shift.label} (${AppointmentsService.fmtH(shift.start)}–${AppointmentsService.fmtH(shift.end)})`;
+      await this.notify(updated, {
+        emailSubject: `RDV ${updated.reference} confirmé — ${offDock.code}`,
+        emailBody:
+          `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été affecté.\n` +
+          `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
+          `Créneau : le ${dateStr}\n\n` +
+          `Présentez le QR code de votre demande au portail du site.\n\ne-depot — MEDLOG Côte d'Ivoire`,
+        waBody:
+          `✅ MEDLOG e-depot — Rendez-vous CONFIRMÉ\n` +
+          `Réf : ${updated.reference}\nConteneur : ${updated.containerNumber}\n` +
+          `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
+          `Créneau : ${dateStr}\n` +
+          `Présentez votre QR code au portail.`,
+      });
+    }
     return updated;
   }
 
@@ -344,14 +354,19 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_RESCHEDULE', id, {
       requestedDate: newDate.toISOString(), shift: newShiftCode,
     });
-    await this.notifyTransporter(
-      updated,
-      `RDV ${updated.reference} reporté`,
-      `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) ` +
+    await this.notify(updated, {
+      emailSubject: `RDV ${updated.reference} reporté`,
+      emailBody:
+        `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) ` +
         `a été reporté au ${fmtD} · shift ${shiftCfg.label}.` +
         (dto.note ? `\nMotif : ${dto.note}` : '') +
         `\n\ne-depot — MEDLOG Côte d'Ivoire`,
-    );
+      waBody:
+        `🕓 MEDLOG e-depot — Rendez-vous REPORTÉ\n` +
+        `Réf : ${updated.reference}\nConteneur : ${updated.containerNumber}\n` +
+        `Nouvelle date : ${fmtD} · shift ${shiftCfg.label}` +
+        (dto.note ? `\nMotif : ${dto.note}` : ''),
+    });
     return updated;
   }
 
@@ -453,13 +468,17 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_TRANSITION', id, { from, to });
     if (to === 'CANCELLED' || to === 'REJECTED') {
       const label = to === 'CANCELLED' ? 'annulé' : 'rejeté';
-      await this.notifyTransporter(
-        updated,
-        `RDV ${updated.reference} ${label}`,
-        `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été ${label}.` +
+      await this.notify(updated, {
+        emailSubject: `RDV ${updated.reference} ${label}`,
+        emailBody:
+          `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été ${label}.` +
           (note ? `\nMotif : ${note}` : '') +
           `\n\ne-depot — MEDLOG Côte d'Ivoire`,
-      );
+        waBody:
+          `❌ MEDLOG e-depot — Rendez-vous ${label.toUpperCase()}\n` +
+          `Réf : ${updated.reference}\nConteneur : ${updated.containerNumber}` +
+          (note ? `\nMotif : ${note}` : ''),
+      });
     }
     return updated;
   }
@@ -470,21 +489,46 @@ export class AppointmentsService {
     });
   }
 
-  /** Notifie le transporteur (créateur du RDV) par e-mail. Ne bloque jamais l'action métier. */
-  private async notifyTransporter(
-    appt: { createdById: string; reference: string; containerNumber: string },
-    subject: string,
-    text: string,
+  /**
+   * Notifie le transporteur (créateur du RDV) et le chauffeur.
+   * E-mail au transporteur + WhatsApp au chauffeur ET au transporteur.
+   * Ne bloque jamais l'action métier (toute erreur est avalée).
+   */
+  private async notify(
+    appt: { createdById: string; reference: string; containerNumber: string; driverPhone?: string | null },
+    opts: { emailSubject: string; emailBody: string; waBody: string },
   ) {
+    let creator: { email: string; phone: string | null } | null = null;
     try {
-      if (!(await this.mail.isConfigured())) return; // SMTP non paramétré → on n'essaie pas
-      const creator = await this.prisma.user.findUnique({
+      creator = await this.prisma.user.findUnique({
         where: { id: appt.createdById },
-        select: { email: true },
+        select: { email: true, phone: true },
       });
-      if (creator?.email) await this.mail.send(creator.email, subject, text);
     } catch {
-      /* une notification ne doit jamais interrompre l'action métier */
+      /* ignore */
+    }
+
+    // E-mail au transporteur.
+    try {
+      if (creator?.email && (await this.mail.isConfigured())) {
+        await this.mail.send(creator.email, opts.emailSubject, opts.emailBody);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // WhatsApp au chauffeur ET au transporteur (numéros dédupliqués).
+    try {
+      if (await this.whatsapp.isConfigured()) {
+        const numbers = [appt.driverPhone, creator?.phone]
+          .map((n) => normalizeCIPhone(n))
+          .filter((n): n is string => !!n);
+        for (const to of [...new Set(numbers)]) {
+          await this.whatsapp.send(to, opts.waBody);
+        }
+      }
+    } catch {
+      /* ignore */
     }
   }
 
