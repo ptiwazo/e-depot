@@ -11,6 +11,9 @@ export default function AppointmentDetail() {
   const [appt, setAppt] = useState<Appointment | null>(null);
   const [qr, setQr] = useState<string>('');
   const [error, setError] = useState('');
+  const [editAtt, setEditAtt] = useState(false);
+  const [att, setAtt] = useState({ truckPlate: '', trailerPlate: '', driverName: '', driverPhone: '' });
+  const [savingAtt, setSavingAtt] = useState(false);
 
   function load() {
     api<Appointment>(`/appointments/${id}`).then(setAppt).catch((e) => setError(e.message));
@@ -35,6 +38,37 @@ export default function AppointmentDetail() {
 
   const canCancel =
     user?.role === 'TRANSPORTER' && appt && ['ASSIGNED', 'CONFIRMED'].includes(appt.status);
+
+  // Attelage modifiable tant que le conteneur n'est pas arrivé au portail.
+  const canEditAttelage =
+    (user?.role === 'TRANSPORTER' || user?.role === 'ADMIN') &&
+    !!appt && ['REQUESTED', 'VALIDATED', 'ASSIGNED', 'CONFIRMED'].includes(appt.status);
+
+  function openEditAtt() {
+    if (!appt) return;
+    setAtt({
+      truckPlate: appt.truckPlate ?? '',
+      trailerPlate: appt.trailerPlate ?? '',
+      driverName: appt.driverName ?? '',
+      driverPhone: appt.driverPhone ?? '',
+    });
+    setError('');
+    setEditAtt(true);
+  }
+
+  async function saveAtt() {
+    setSavingAtt(true);
+    setError('');
+    try {
+      await api(`/appointments/${id}/attelage`, { method: 'PATCH', body: JSON.stringify(att) });
+      setEditAtt(false);
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingAtt(false);
+    }
+  }
 
   // Génère un laissez-passer PDF (A6 paysage) avec le QR code, imprimable au portail.
   function printPdf() {
@@ -117,6 +151,40 @@ export default function AppointmentDetail() {
                 <tr><td className="muted">Chauffeur</td><td>{appt.driverName ?? '—'}{appt.driverPhone ? ` · ${appt.driverPhone}` : ''}</td></tr>
               </tbody>
             </table>
+            {canEditAttelage && !editAtt && (
+              <button className="btn ghost sm" style={{ marginTop: 12 }} onClick={openEditAtt}>✏️ Modifier l'attelage</button>
+            )}
+            {editAtt && (
+              <div style={{ marginTop: 12, padding: 12, background: 'var(--grey-100, #f4f4f4)', borderRadius: 10 }}>
+                <div className="small muted" style={{ marginBottom: 8 }}>
+                  Attelage — modifiable jusqu'à l'arrivée du conteneur au portail.
+                </div>
+                <div className="row">
+                  <div className="field">
+                    <label>Camion (immatriculation) *</label>
+                    <input className="mono" value={att.truckPlate} onChange={(e) => setAtt({ ...att, truckPlate: e.target.value.toUpperCase() })} />
+                  </div>
+                  <div className="field">
+                    <label>Remorque (immatriculation) *</label>
+                    <input className="mono" value={att.trailerPlate} onChange={(e) => setAtt({ ...att, trailerPlate: e.target.value.toUpperCase() })} />
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="field">
+                    <label>Chauffeur (nom) *</label>
+                    <input value={att.driverName} onChange={(e) => setAtt({ ...att, driverName: e.target.value })} />
+                  </div>
+                  <div className="field">
+                    <label>Téléphone chauffeur</label>
+                    <input value={att.driverPhone} onChange={(e) => setAtt({ ...att, driverPhone: e.target.value })} placeholder="+2250708112233" />
+                  </div>
+                </div>
+                <div className="flex" style={{ gap: 8, marginTop: 8 }}>
+                  <button className="btn sm" disabled={savingAtt} onClick={saveAtt}>{savingAtt ? 'Enregistrement…' : 'Enregistrer l\'attelage'}</button>
+                  <button className="btn ghost sm" disabled={savingAtt} onClick={() => setEditAtt(false)}>Annuler</button>
+                </div>
+              </div>
+            )}
             {canCancel && (
               <button className="btn danger sm" style={{ marginTop: 14 }} onClick={cancel}>Annuler le rendez-vous</button>
             )}

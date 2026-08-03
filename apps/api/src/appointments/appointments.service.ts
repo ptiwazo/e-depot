@@ -148,7 +148,74 @@ export class AppointmentsService {
     });
 
     await this.audit(user.id, 'APPOINTMENT_CREATE', appt.id, { reference, shift: dto.shiftCode });
+    // Notifie les agents / administrateurs MEDLOG de la nouvelle demande (WhatsApp, arrière-plan).
+    void this.notifyStaffNewAppointment(appt);
     return appt;
+  }
+
+  // Statuts où l'attelage reste modifiable par le transporteur (avant l'arrivée au portail).
+  private static readonly ATTELAGE_EDITABLE = ['REQUESTED', 'VALIDATED', 'ASSIGNED', 'CONFIRMED'];
+
+  /**
+   * Modification de l'attelage (camion / remorque / chauffeur) par le transporteur.
+   * Autorisée tant que le conteneur n'est pas ARRIVÉ (ni au-delà, ni RDV clôturé).
+   */
+  async updateAttelage(
+    user: AuthUser,
+    id: string,
+    dto: { truckPlate?: string; trailerPlate?: string; driverName?: string; driverPhone?: string },
+  ) {
+    const appt = await this.prisma.appointment.findUnique({ where: { id } });
+    if (!appt) throw new NotFoundException('Rendez-vous introuvable');
+    if (user.role === 'TRANSPORTER' && appt.companyId !== user.companyId) {
+      throw new ForbiddenException();
+    }
+    if (!AppointmentsService.ATTELAGE_EDITABLE.includes(appt.status)) {
+      throw new BadRequestException(
+        `Attelage non modifiable : le conteneur est déjà arrivé ou le rendez-vous est clôturé (statut ${appt.status}).`,
+      );
+    }
+
+    const data: any = {};
+    const changes: string[] = [];
+    if (dto.truckPlate !== undefined) {
+      const v = dto.truckPlate.toUpperCase().trim();
+      if (!v) throw new BadRequestException('Le camion ne peut pas être vide.');
+      data.truckPlate = v; changes.push(`camion ${v}`);
+    }
+    if (dto.trailerPlate !== undefined) {
+      const v = dto.trailerPlate.toUpperCase().trim();
+      if (!v) throw new BadRequestException('La remorque ne peut pas être vide.');
+      data.trailerPlate = v; changes.push(`remorque ${v}`);
+    }
+    if (dto.driverName !== undefined) {
+      const v = dto.driverName.trim();
+      if (!v) throw new BadRequestException('Le chauffeur ne peut pas être vide.');
+      data.driverName = v; changes.push(`chauffeur ${v}`);
+    }
+    if (dto.driverPhone !== undefined) {
+      data.driverPhone = dto.driverPhone.trim() || null;
+      changes.push('téléphone chauffeur');
+    }
+    if (!changes.length) return this.findOne(user, id);
+
+    const updated = await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        ...data,
+        events: {
+          create: {
+            fromStatus: appt.status,
+            toStatus: appt.status,
+            note: `Attelage mis à jour (${changes.join(', ')})`,
+            actorId: user.id,
+          },
+        },
+      },
+      include: this.include(),
+    });
+    await this.audit(user.id, 'APPOINTMENT_ATTELAGE', id, data);
+    return updated;
   }
 
   /**
@@ -534,6 +601,36 @@ export class AppointmentsService {
       }
     } catch {
       /* ignore */
+    }
+  }
+
+  /**
+   * Notifie les agents et administrateurs MEDLOG (WhatsApp) d'une nouvelle demande de RDV.
+   * Ils peuvent répondre directement au message pour coordonner. Ne bloque jamais.
+   */
+  private async notifyStaffNewAppointment(appt: {
+    reference: string; containerNumber: string; containerType: string; blNumber: string;
+    requestedDate: Date; shiftCode: string | null; company?: { name?: string | null } | null;
+  }) {
+    try {
+      if (!(await this.whatsapp.isConfigured())) return;
+      const staff = await this.prisma.user.findMany({
+        where: { role: { in: ['AGENT', 'ADMIN'] }, active: true, phone: { not: null } },
+        select: { phone: true },
+      });
+      const numbers = [...new Set(staff.map((s) => normalizeCIPhone(s.phone)).filter((n): n is string => !!n))];
+      if (!numbers.length) return;
+      const body =
+        `🆕 MEDLOG e-depot — Nouvelle demande de rendez-vous\n` +
+        `Réf : ${appt.reference}\n` +
+        `Transporteur : ${appt.company?.name ?? '—'}\n` +
+        `Conteneur : ${appt.containerNumber} (${appt.containerType}) · BL ${appt.blNumber}\n` +
+        `Souhait : ${AppointmentsService.fmtD(appt.requestedDate)} · shift ${appt.shiftCode ?? '—'}\n` +
+        `➡️ À affecter : https://e-depot.netlify.app/e-depot/agent\n` +
+        `Vous pouvez répondre à ce message pour coordonner.`;
+      for (const to of numbers) await this.whatsapp.send(to, body);
+    } catch {
+      /* la notification ne doit jamais interrompre la création */
     }
   }
 

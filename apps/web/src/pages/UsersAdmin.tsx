@@ -27,6 +27,7 @@ export default function UsersAdmin() {
   const [link, setLink] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [phones, setPhones] = useState<Record<string, string>>({});
 
   function load() {
     api<ManagedUser[]>('/users').then(setUsers);
@@ -61,6 +62,16 @@ export default function UsersAdmin() {
     setErr(''); setMsg('');
     try { await api(`/users/${u.id}`, { method: 'PATCH', body: JSON.stringify({ active: !u.active }) }); load(); }
     catch (e: any) { setErr(e.message); }
+  }
+
+  async function savePhone(u: ManagedUser) {
+    setErr(''); setMsg('');
+    try {
+      await api(`/users/${u.id}`, { method: 'PATCH', body: JSON.stringify({ phone: phones[u.id] ?? '' }) });
+      setMsg(`Téléphone mis à jour pour ${u.name}.`);
+      setPhones((p) => { const n = { ...p }; delete n[u.id]; return n; });
+      load();
+    } catch (e: any) { setErr(e.message); }
   }
 
   async function resetLink(u: ManagedUser) {
@@ -156,13 +167,27 @@ export default function UsersAdmin() {
         <h2 style={{ marginBottom: 12 }}>{users.length} compte(s)</h2>
         <table>
           <thead>
-            <tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Rattachement</th><th>Statut</th><th></th></tr>
+            <tr><th>Nom</th><th>Email</th><th>Téléphone (WhatsApp)</th><th>Rôle</th><th>Rattachement</th><th>Statut</th><th></th></tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {users.map((u) => {
+              const phoneVal = phones[u.id] ?? (u.phone ?? '');
+              const phoneDirty = phones[u.id] !== undefined && phones[u.id] !== (u.phone ?? '');
+              return (
               <tr key={u.id}>
                 <td>{u.name}</td>
                 <td className="small">{u.email}</td>
+                <td>
+                  <div className="flex" style={{ gap: 4, alignItems: 'center' }}>
+                    <input
+                      className="mono small" style={{ width: 128 }}
+                      value={phoneVal}
+                      onChange={(e) => setPhones((p) => ({ ...p, [u.id]: e.target.value }))}
+                      placeholder="+2250708…"
+                    />
+                    {phoneDirty && <button className="btn sm" onClick={() => savePhone(u)} title="Enregistrer le téléphone">💾</button>}
+                  </div>
+                </td>
                 <td>{roleLabel(u.role)}</td>
                 <td className="small">{u.company?.name || (u.offDock ? `${u.offDock.code}` : '—')}</td>
                 <td>
@@ -181,8 +206,9 @@ export default function UsersAdmin() {
                   </div>
                 </td>
               </tr>
-            ))}
-            {!users.length && <tr><td colSpan={6} className="muted">Aucun compte.</td></tr>}
+              );
+            })}
+            {!users.length && <tr><td colSpan={7} className="muted">Aucun compte.</td></tr>}
           </tbody>
         </table>
       </div>

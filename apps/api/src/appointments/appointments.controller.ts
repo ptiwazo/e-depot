@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, Post, Query, UseGuards,
+  Body, Controller, Get, Param, Patch, Post, Query, UseGuards,
 } from '@nestjs/common';
 import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AppointmentsService } from './appointments.service';
@@ -37,6 +37,13 @@ class RescheduleDto {
   @IsOptional() @IsISO8601() requestedDate?: string;
   @IsOptional() @IsString() shiftCode?: string;
   @IsOptional() @IsString() note?: string;
+}
+
+class AttelageDto {
+  @IsOptional() @IsString() truckPlate?: string;
+  @IsOptional() @IsString() trailerPlate?: string;
+  @IsOptional() @IsString() driverName?: string;
+  @IsOptional() @IsString() driverPhone?: string;
 }
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -78,6 +85,14 @@ export class AppointmentsController {
   @Post(':id/reschedule')
   reschedule(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: RescheduleDto) {
     return this.service.reschedule(user, id, dto);
+  }
+
+  // Modification de l'attelage (camion/remorque/chauffeur) par le transporteur,
+  // possible tant que le conteneur n'est pas arrivé au portail.
+  @Roles('TRANSPORTER', 'ADMIN')
+  @Patch(':id/attelage')
+  updateAttelage(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AttelageDto) {
+    return this.service.updateAttelage(user, id, dto);
   }
 
   @Get(':id')
