@@ -17,9 +17,11 @@ export const SETTING_DEFAULTS = {
   // Assistant IA d'exploitation (synthèse en langage naturel via l'API Claude ; vide = mode déterministe seul).
   ai_api_key: '', // clé API Anthropic
   ai_model: 'claude-sonnet-5', // modèle Claude utilisé pour la synthèse
-  // Notifications WhatsApp via UltraMsg (chauffeur + transporteur). Token vide = désactivé.
-  whatsapp_api_url: 'https://api.ultramsg.com/instance103758/', // URL de l'instance UltraMsg
-  whatsapp_token: '', // token UltraMsg (secret)
+  // Notifications WhatsApp (chauffeur + transporteur). Token vide = désactivé.
+  whatsapp_provider: 'ultramsg', // 'ultramsg' | 'infobip'
+  whatsapp_api_url: 'https://api.ultramsg.com/instance103758/', // URL/base de l'API (UltraMsg ou Infobip)
+  whatsapp_token: '', // token UltraMsg / clé API Infobip (secret)
+  whatsapp_sender: '', // Infobip : numéro expéditeur WhatsApp enregistré (from)
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

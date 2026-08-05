@@ -24,15 +24,23 @@ export class WhatsappService {
 
   constructor(private settings: SettingsService) {}
 
-  /** true si un token UltraMsg et une URL d'instance sont configurés. */
+  private async provider(): Promise<string> {
+    return ((await this.settings.get('whatsapp_provider')) || 'ultramsg').trim().toLowerCase();
+  }
+
+  /** true si la messagerie WhatsApp est configurée (selon le fournisseur choisi). */
   async isConfigured(): Promise<boolean> {
     const token = (await this.settings.get('whatsapp_token')).trim();
     const url = (await this.settings.get('whatsapp_api_url')).trim();
-    return !!token && !!url;
+    if (!token || !url) return false;
+    if ((await this.provider()) === 'infobip') {
+      return !!(await this.settings.get('whatsapp_sender')).trim();
+    }
+    return true;
   }
 
   /**
-   * Envoie un message WhatsApp via UltraMsg (endpoint messages/chat).
+   * Envoie un message WhatsApp via le fournisseur configuré (UltraMsg ou Infobip).
    * Ne lève jamais : renvoie { ok, error? }.
    */
   async send(rawTo: string, body: string): Promise<{ ok: boolean; error?: string }> {
@@ -41,26 +49,66 @@ export class WhatsappService {
     const base = (await this.settings.get('whatsapp_api_url')).trim();
     const token = (await this.settings.get('whatsapp_token')).trim();
     if (!base || !token) return { ok: false, error: 'WhatsApp non configuré' };
-    const url = base.replace(/\/+$/, '') + '/messages/chat';
     try {
-      const params = new URLSearchParams({ token, to, body });
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 12000);
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      const json: any = await res.json().catch(() => ({}));
-      // UltraMsg : succès = { sent: "true", id: ... } ; échec = { error: ... }
-      if (json?.sent === 'true' || json?.sent === true || json?.id) return { ok: true };
-      return { ok: false, error: json?.error || json?.message || `HTTP ${res.status}` };
+      if ((await this.provider()) === 'infobip') return await this.sendInfobip(base, token, to, body);
+      return await this.sendUltramsg(base, token, to, body);
     } catch (e: any) {
       const error = e?.name === 'AbortError' ? 'délai dépassé (12s)' : e?.message ?? 'erreur inconnue';
       this.logger.warn(`WhatsApp échec (${to}) : ${error}`);
       return { ok: false, error };
     }
+  }
+
+  // --- UltraMsg : POST {base}/messages/chat (form-urlencoded) --------------
+  private async sendUltramsg(base: string, token: string, to: string, body: string) {
+    const url = base.replace(/\/+$/, '') + '/messages/chat';
+    const params = new URLSearchParams({ token, to, body });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const json: any = await res.json().catch(() => ({}));
+    if (json?.sent === 'true' || json?.sent === true || json?.id) return { ok: true };
+    return { ok: false, error: json?.error || json?.message || `HTTP ${res.status}` };
+  }
+
+  // --- Infobip : POST https://{base}/whatsapp/1/message/text (JSON) --------
+  private async sendInfobip(base: string, apiKey: string, to: string, body: string) {
+    const sender = (await this.settings.get('whatsapp_sender')).trim();
+    if (!sender) return { ok: false, error: 'Expéditeur WhatsApp (sender) manquant — renseignez « Numéro expéditeur » dans les paramètres.' };
+    const host = base.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    const url = `https://${host}/whatsapp/1/message/text`;
+    const toDigits = to.replace(/^\+/, ''); // Infobip attend le numéro sans le « + »
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `App ${apiKey}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ from: sender, to: toDigits, content: { text: body } }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const json: any = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const st = json?.messages?.[0]?.status;
+      if (st && ['REJECTED', 'UNDELIVERABLE'].includes(st.groupName)) {
+        return { ok: false, error: st.description || st.name || 'message rejeté' };
+      }
+      return { ok: true };
+    }
+    const err =
+      json?.requestError?.serviceException?.text ||
+      json?.requestError?.serviceException?.messageId ||
+      `HTTP ${res.status}`;
+    return { ok: false, error: err };
   }
 }
