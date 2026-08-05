@@ -99,7 +99,8 @@ export class WhatsappService {
     clearTimeout(timer);
     const json: any = await res.json().catch(() => ({}));
     if (res.ok) {
-      const st = json?.messages?.[0]?.status;
+      // Réponse /message/text : statut au niveau racine ; /message (bulk) : messages[].status.
+      const st = json?.status || json?.messages?.[0]?.status;
       if (st && ['REJECTED', 'UNDELIVERABLE'].includes(st.groupName)) {
         return { ok: false, error: st.description || st.name || 'message rejeté' };
       }
