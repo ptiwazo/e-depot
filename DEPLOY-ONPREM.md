@@ -10,6 +10,22 @@ SMG4008-8G** (email → SMS) et l'accès au relais interne `mail-relay.msc.com`.
 
 ---
 
+## 0. Démarrage rapide (script clé en main)
+
+Un script installe tout automatiquement (code, dépendances, `.env`, build, migrations,
+service Windows, vérification) :
+
+1. Prérequis : **Node.js 20 LTS** et **Git** installés sur le serveur.
+2. **Clic droit** sur `deploy\install-onprem.bat` → **Exécuter en tant qu'administrateur**.
+3. Coller l'**URL PostgreSQL** (`DATABASE_URL`) quand demandé, répondre **o** au seed la 1ʳᵉ fois.
+4. Le script installe le service Windows **`e-depot-api`** et vérifie `http://localhost:3001/api/health`.
+5. Faire ensuite les étapes **IIS** (§6) et **Front** (§7), puis tester le SMS (§8).
+
+> Re-lancer le script = mise à jour (git pull + rebuild + migrate + restart).
+> Les sections ci-dessous détaillent chaque étape (utile si vous préférez tout faire à la main).
+
+---
+
 ## 1. Architecture cible
 
 ```
