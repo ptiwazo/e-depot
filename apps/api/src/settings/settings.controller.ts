@@ -54,7 +54,7 @@ export class SettingsController {
           throw new BadRequestException('Port SMTP invalide (1–65535).');
         }
         await this.settings.set(key, String(n));
-      } else if (key === 'smtp_password' || key === 'ai_api_key' || key === 'whatsapp_token' || key === 'sms_smtp_password') {
+      } else if (key === 'smtp_password' || key === 'ai_api_key' || key === 'whatsapp_token' || key === 'sms_smtp_password' || key === 'sms_brevo_key') {
         // Secret masqué : on ne met à jour que si une nouvelle valeur est fournie.
         if (raw) await this.settings.set(key, raw);
       } else if (key.startsWith('smtp_') || key.startsWith('ai_') || key.startsWith('whatsapp_') || key.startsWith('sms_')) {
@@ -116,6 +116,8 @@ export class SettingsController {
       whatsapp_token_set: !!all.whatsapp_token,
       sms_smtp_password: '',
       sms_smtp_password_set: !!all.sms_smtp_password,
+      sms_brevo_key: '',
+      sms_brevo_key_set: !!all.sms_brevo_key,
     };
   }
 }

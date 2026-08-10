@@ -23,11 +23,13 @@ export const SETTING_DEFAULTS = {
   whatsapp_token: '', // token UltraMsg / clé API Infobip (secret)
   whatsapp_sender: '', // Infobip : numéro expéditeur WhatsApp enregistré (from)
   // Passerelle SMS SMG4008-8G (email -> SMS). Mot de passe vide = désactivé.
+  sms_transport: 'smtp', // 'smtp' (direct, on-premise) | 'brevo' (API HTTP, fonctionne depuis le cloud)
   sms_smtp_host: 'smtp.gmail.com', // SMTP d'envoi vers la passerelle
   sms_smtp_port: '587',
-  sms_smtp_user: 'alertemedlog@gmail.com', // compte expéditeur
-  sms_smtp_password: '', // mot de passe / mot de passe d'application (secret)
+  sms_smtp_user: 'alertemedlog@gmail.com', // compte/adresse expéditeur (From)
+  sms_smtp_password: '', // mot de passe / mot de passe d'application (secret, transport smtp)
   sms_gateway_email: 'medlogsms@gmail.com', // boîte surveillée par la passerelle SMG4008-8G
+  sms_brevo_key: '', // clé API Brevo (secret, transport brevo)
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

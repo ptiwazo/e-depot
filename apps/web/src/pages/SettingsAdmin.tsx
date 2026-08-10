@@ -22,12 +22,15 @@ type Settings = {
   whatsapp_token: string;
   whatsapp_sender: string;
   whatsapp_token_set?: boolean;
+  sms_transport: string;
   sms_smtp_host: string;
   sms_smtp_port: string;
   sms_smtp_user: string;
   sms_smtp_password: string;
   sms_gateway_email: string;
+  sms_brevo_key: string;
   sms_smtp_password_set?: boolean;
+  sms_brevo_key_set?: boolean;
 };
 
 export default function SettingsAdmin() {
@@ -263,46 +266,69 @@ export default function SettingsAdmin() {
         <h2>Notifications SMS (passerelle SMG4008-8G)</h2>
         <div className="alert info">
           Envoie un <b>SMS</b> au <b>chauffeur</b> et au <b>transporteur</b> (affectation, report, annulation),
-          et aux <b>agents/admins</b> à chaque nouvelle demande. Fonctionne en <b>e-mail → SMS</b> :
-          un mail est envoyé à la boîte de la passerelle. Laissez le <b>mot de passe</b> vide pour désactiver.
+          et aux <b>agents/admins</b> à chaque nouvelle demande. Principe <b>e-mail → SMS</b> :
+          un mail (objet = 00+numéro, corps = [SMS]…[End]) est déposé dans la boîte de la passerelle.
         </div>
         <div className="row">
           <div className="field">
-            <label>Serveur SMTP d'envoi</label>
-            <input value={s.sms_smtp_host} onChange={(e) => setS({ ...s, sms_smtp_host: e.target.value })} placeholder="smtp.gmail.com" />
+            <label>Mode d'envoi du mail</label>
+            <select value={s.sms_transport} onChange={(e) => setS({ ...s, sms_transport: e.target.value })}>
+              <option value="brevo">API Brevo (HTTP — depuis le cloud / Render)</option>
+              <option value="smtp">SMTP direct (serveur interne MEDLOG)</option>
+            </select>
           </div>
           <div className="field">
-            <label>Port</label>
-            <input type="number" min={1} max={65535} value={s.sms_smtp_port} onChange={(e) => setS({ ...s, sms_smtp_port: e.target.value })} />
-            <div className="small muted" style={{ marginTop: 4 }}>587 (STARTTLS) · 465 (TLS)</div>
-          </div>
-        </div>
-        <div className="row">
-          <div className="field">
-            <label>Compte expéditeur (e-mail)</label>
-            <input autoComplete="off" value={s.sms_smtp_user} onChange={(e) => setS({ ...s, sms_smtp_user: e.target.value })} placeholder="alertemedlog@gmail.com" />
-          </div>
-          <div className="field">
-            <label>Mot de passe (ou mot de passe d'application)</label>
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder={s.sms_smtp_password_set ? '•••••••• (inchangé)' : 'mot de passe'}
-              value={s.sms_smtp_password}
-              onChange={(e) => setS({ ...s, sms_smtp_password: e.target.value })}
-            />
-            <div className="small muted" style={{ marginTop: 4 }}>
-              {s.sms_smtp_password_set
-                ? 'Un mot de passe est déjà enregistré. Laissez vide pour le conserver.'
-                : 'Gmail : utilisez un « mot de passe d\'application ». Jamais réaffiché.'}
-            </div>
+            <label>Adresse e-mail de la passerelle SMS</label>
+            <input value={s.sms_gateway_email} onChange={(e) => setS({ ...s, sms_gateway_email: e.target.value })} placeholder="medlogsms@gmail.com" />
+            <div className="small muted" style={{ marginTop: 4 }}>Boîte surveillée par le SMG4008-8G.</div>
           </div>
         </div>
         <div className="field">
-          <label>Adresse e-mail de la passerelle SMS</label>
-          <input value={s.sms_gateway_email} onChange={(e) => setS({ ...s, sms_gateway_email: e.target.value })} placeholder="medlogsms@gmail.com" />
-          <div className="small muted" style={{ marginTop: 4 }}>Boîte surveillée par le SMG4008-8G (objet = 00+numéro, corps = [SMS]…[End]).</div>
+          <label>Adresse e-mail expéditeur (From)</label>
+          <input autoComplete="off" value={s.sms_smtp_user} onChange={(e) => setS({ ...s, sms_smtp_user: e.target.value })} placeholder="alertemedlog@gmail.com" />
+          <div className="small muted" style={{ marginTop: 4 }}>
+            Doit être l'expéditeur attendu par la passerelle. Avec Brevo, cette adresse doit être <b>validée comme expéditeur</b> dans Brevo.
+          </div>
         </div>
+
+        {s.sms_transport === 'brevo' ? (
+          <div className="field">
+            <label>Clé API Brevo</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder={s.sms_brevo_key_set ? '•••••••• (inchangée)' : 'xkeysib-...'}
+              value={s.sms_brevo_key}
+              onChange={(e) => setS({ ...s, sms_brevo_key: e.target.value })}
+            />
+            <div className="small muted" style={{ marginTop: 4 }}>
+              {s.sms_brevo_key_set
+                ? 'Une clé est déjà enregistrée. Laissez vide pour la conserver.'
+                : 'Brevo → SMTP & API → API Keys. Jamais réaffichée après enregistrement.'}
+            </div>
+          </div>
+        ) : (
+          <div className="row">
+            <div className="field">
+              <label>Serveur SMTP</label>
+              <input value={s.sms_smtp_host} onChange={(e) => setS({ ...s, sms_smtp_host: e.target.value })} placeholder="smtp.gmail.com" />
+              <div className="small muted" style={{ marginTop: 4 }}>Port {s.sms_smtp_port} · 587 (STARTTLS) / 465 (TLS)</div>
+            </div>
+            <div className="field">
+              <label>Mot de passe (ou mot de passe d'application)</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder={s.sms_smtp_password_set ? '•••••••• (inchangé)' : 'mot de passe'}
+                value={s.sms_smtp_password}
+                onChange={(e) => setS({ ...s, sms_smtp_password: e.target.value })}
+              />
+              <div className="small muted" style={{ marginTop: 4 }}>
+                {s.sms_smtp_password_set ? 'Déjà enregistré. Vide = conserver.' : 'Gmail : mot de passe d\'application. ⚠ SMTP bloqué sur Render.'}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex" style={{ gap: 10, alignItems: 'flex-end', marginTop: 6 }}>
           <div className="field" style={{ flex: 1, margin: 0 }}>
             <label>Tester l'envoi vers (numéro)</label>
