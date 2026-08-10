@@ -3,6 +3,7 @@ import { IsEmail, IsOptional, IsString } from 'class-validator';
 import { SettingsService, SETTING_KEYS, SettingKey } from './settings.service';
 import { MailService } from '../mail/mail.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { SmsService } from '../sms/sms.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles';
@@ -15,6 +16,10 @@ class WhatsappTestDto {
   @IsString() to!: string;
 }
 
+class SmsTestDto {
+  @IsString() to!: string;
+}
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 @Controller('settings')
@@ -23,6 +28,7 @@ export class SettingsController {
     private settings: SettingsService,
     private mail: MailService,
     private whatsapp: WhatsappService,
+    private sms: SmsService,
   ) {}
 
   @Get()
@@ -42,17 +48,17 @@ export class SettingsController {
           throw new BadRequestException(`Valeur invalide pour « ${key} » (entier positif).`);
         }
         await this.settings.set(key, String(n));
-      } else if (key === 'smtp_port') {
+      } else if (key === 'smtp_port' || key === 'sms_smtp_port') {
         const n = Number(raw);
         if (!Number.isInteger(n) || n < 1 || n > 65535) {
           throw new BadRequestException('Port SMTP invalide (1–65535).');
         }
         await this.settings.set(key, String(n));
-      } else if (key === 'smtp_password' || key === 'ai_api_key' || key === 'whatsapp_token') {
+      } else if (key === 'smtp_password' || key === 'ai_api_key' || key === 'whatsapp_token' || key === 'sms_smtp_password') {
         // Secret masqué : on ne met à jour que si une nouvelle valeur est fournie.
         if (raw) await this.settings.set(key, raw);
-      } else if (key.startsWith('smtp_') || key.startsWith('ai_') || key.startsWith('whatsapp_')) {
-        // Champs SMTP / IA / WhatsApp facultatifs : vide autorisé (= fonctionnalité désactivée).
+      } else if (key.startsWith('smtp_') || key.startsWith('ai_') || key.startsWith('whatsapp_') || key.startsWith('sms_')) {
+        // Champs SMTP / IA / WhatsApp / SMS facultatifs : vide autorisé (= fonctionnalité désactivée).
         await this.settings.set(key, raw);
       } else {
         if (!raw) throw new BadRequestException(`Valeur vide interdite pour « ${key} ».`);
@@ -88,6 +94,15 @@ export class SettingsController {
     return { sent: true, to: dto.to.trim() };
   }
 
+  // Envoi d'un SMS de test via la passerelle SMG4008-8G.
+  @Post('sms-test')
+  async smsTest(@Body() dto: SmsTestDto) {
+    if (!dto.to?.trim()) throw new BadRequestException('Numéro de destination requis.');
+    const res = await this.sms.send(dto.to.trim(), 'e-depot (MEDLOG) - test SMS. Si vous recevez ce message, la passerelle fonctionne.');
+    if (!res.ok) throw new BadRequestException(`Échec de l'envoi : ${res.error}`);
+    return { sent: true, to: dto.to.trim() };
+  }
+
   /** Réponse publique : les secrets (mot de passe SMTP, clé API IA) ne sont jamais renvoyés. */
   private async publicSettings() {
     const all = await this.settings.getAll();
@@ -99,6 +114,8 @@ export class SettingsController {
       ai_api_key_set: !!all.ai_api_key,
       whatsapp_token: '',
       whatsapp_token_set: !!all.whatsapp_token,
+      sms_smtp_password: '',
+      sms_smtp_password_set: !!all.sms_smtp_password,
     };
   }
 }

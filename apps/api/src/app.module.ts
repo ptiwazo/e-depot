@@ -18,6 +18,7 @@ import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './mail/mail.module';
 import { AiModule } from './ai/ai.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { SmsModule } from './sms/sms.module';
 
 @Controller()
 class HealthController {
@@ -34,6 +35,7 @@ class HealthController {
     PrismaModule,
     MailModule,
     WhatsappModule,
+    SmsModule,
     ContainersModule,
     SettingsModule,
     UsersModule,

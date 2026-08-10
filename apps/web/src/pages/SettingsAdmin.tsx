@@ -22,6 +22,12 @@ type Settings = {
   whatsapp_token: string;
   whatsapp_sender: string;
   whatsapp_token_set?: boolean;
+  sms_smtp_host: string;
+  sms_smtp_port: string;
+  sms_smtp_user: string;
+  sms_smtp_password: string;
+  sms_gateway_email: string;
+  sms_smtp_password_set?: boolean;
 };
 
 export default function SettingsAdmin() {
@@ -33,6 +39,8 @@ export default function SettingsAdmin() {
   const [testing, setTesting] = useState(false);
   const [waTo, setWaTo] = useState('');
   const [waTesting, setWaTesting] = useState(false);
+  const [smsTo, setSmsTo] = useState('');
+  const [smsTesting, setSmsTesting] = useState(false);
 
   useEffect(() => {
     api<Settings>('/settings').then(setS);
@@ -82,6 +90,23 @@ export default function SettingsAdmin() {
       setErr(e.message);
     } finally {
       setWaTesting(false);
+    }
+  }
+
+  async function sendSmsTest() {
+    setMsg(''); setErr('');
+    if (!smsTo.trim()) { setErr('Renseignez un numéro de test SMS.'); return; }
+    setSmsTesting(true);
+    try {
+      const r = await api<{ sent: boolean; to: string }>('/settings/sms-test', {
+        method: 'POST',
+        body: JSON.stringify({ to: smsTo.trim() }),
+      });
+      setMsg(`SMS de test envoyé à ${r.to}.`);
+    } catch (e: any) {
+      setErr(e.message);
+    } finally {
+      setSmsTesting(false);
     }
   }
 
@@ -231,6 +256,64 @@ export default function SettingsAdmin() {
         </div>
         <div className="small muted" style={{ marginTop: 4 }}>
           Enregistrez d'abord la configuration SMTP avant de tester.
+        </div>
+
+        <hr style={{ margin: '22px 0', border: 0, borderTop: '1px solid var(--line, #e0e0e0)' }} />
+
+        <h2>Notifications SMS (passerelle SMG4008-8G)</h2>
+        <div className="alert info">
+          Envoie un <b>SMS</b> au <b>chauffeur</b> et au <b>transporteur</b> (affectation, report, annulation),
+          et aux <b>agents/admins</b> à chaque nouvelle demande. Fonctionne en <b>e-mail → SMS</b> :
+          un mail est envoyé à la boîte de la passerelle. Laissez le <b>mot de passe</b> vide pour désactiver.
+        </div>
+        <div className="row">
+          <div className="field">
+            <label>Serveur SMTP d'envoi</label>
+            <input value={s.sms_smtp_host} onChange={(e) => setS({ ...s, sms_smtp_host: e.target.value })} placeholder="smtp.gmail.com" />
+          </div>
+          <div className="field">
+            <label>Port</label>
+            <input type="number" min={1} max={65535} value={s.sms_smtp_port} onChange={(e) => setS({ ...s, sms_smtp_port: e.target.value })} />
+            <div className="small muted" style={{ marginTop: 4 }}>587 (STARTTLS) · 465 (TLS)</div>
+          </div>
+        </div>
+        <div className="row">
+          <div className="field">
+            <label>Compte expéditeur (e-mail)</label>
+            <input autoComplete="off" value={s.sms_smtp_user} onChange={(e) => setS({ ...s, sms_smtp_user: e.target.value })} placeholder="alertemedlog@gmail.com" />
+          </div>
+          <div className="field">
+            <label>Mot de passe (ou mot de passe d'application)</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder={s.sms_smtp_password_set ? '•••••••• (inchangé)' : 'mot de passe'}
+              value={s.sms_smtp_password}
+              onChange={(e) => setS({ ...s, sms_smtp_password: e.target.value })}
+            />
+            <div className="small muted" style={{ marginTop: 4 }}>
+              {s.sms_smtp_password_set
+                ? 'Un mot de passe est déjà enregistré. Laissez vide pour le conserver.'
+                : 'Gmail : utilisez un « mot de passe d\'application ». Jamais réaffiché.'}
+            </div>
+          </div>
+        </div>
+        <div className="field">
+          <label>Adresse e-mail de la passerelle SMS</label>
+          <input value={s.sms_gateway_email} onChange={(e) => setS({ ...s, sms_gateway_email: e.target.value })} placeholder="medlogsms@gmail.com" />
+          <div className="small muted" style={{ marginTop: 4 }}>Boîte surveillée par le SMG4008-8G (objet = 00+numéro, corps = [SMS]…[End]).</div>
+        </div>
+        <div className="flex" style={{ gap: 10, alignItems: 'flex-end', marginTop: 6 }}>
+          <div className="field" style={{ flex: 1, margin: 0 }}>
+            <label>Tester l'envoi vers (numéro)</label>
+            <input placeholder="+2250707776408" value={smsTo} onChange={(e) => setSmsTo(e.target.value)} />
+          </div>
+          <button type="button" className="btn ghost" disabled={smsTesting} onClick={sendSmsTest}>
+            {smsTesting ? 'Envoi…' : '✉ Envoyer un SMS test'}
+          </button>
+        </div>
+        <div className="small muted" style={{ marginTop: 4 }}>
+          Enregistrez d'abord la configuration avant de tester. Numéros acceptés : +225… ou format local (0707…).
         </div>
 
         <hr style={{ margin: '22px 0', border: 0, borderTop: '1px solid var(--line, #e0e0e0)' }} />

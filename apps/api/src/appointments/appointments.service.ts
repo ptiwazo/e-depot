@@ -24,7 +24,8 @@ import { haversineKm, PORT_ABIDJAN } from './geo';
 import { computeCongestion } from '../offdocks/congestion';
 import { AuthUser } from '../common/current-user.decorator';
 import { MailService } from '../mail/mail.service';
-import { WhatsappService, normalizeCIPhone } from '../whatsapp/whatsapp.service';
+import { normalizeCIPhone } from '../whatsapp/whatsapp.service';
+import { SmsService } from '../sms/sms.service';
 
 const ACTIVE_STATUSES = ['ASSIGNED', 'CONFIRMED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED'];
 
@@ -35,7 +36,7 @@ export class AppointmentsService {
     @Inject(CONTAINER_REPOSITORY) private readonly containers: ContainerRepository,
     private readonly settings: SettingsService,
     private readonly mail: MailService,
-    private readonly whatsapp: WhatsappService,
+    private readonly sms: SmsService,
   ) {}
 
   private ref(): string {
@@ -348,12 +349,10 @@ export class AppointmentsService {
           `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
           `Créneau : le ${dateStr}\n\n` +
           `Présentez le QR code de votre demande au portail du site.\n\ne-depot — MEDLOG Côte d'Ivoire`,
-        waBody:
-          `✅ MEDLOG e-depot — Rendez-vous CONFIRMÉ\n` +
-          `Réf : ${updated.reference}\nConteneur : ${updated.containerNumber}\n` +
-          `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
-          `Créneau : ${dateStr}\n` +
-          `Présentez votre QR code au portail.`,
+        smsBody:
+          `MEDLOG e-depot: RDV ${updated.reference} confirme. ` +
+          `OFF-DOCK ${offDock.code} (${offDock.city}), le ${dateStr}. ` +
+          `Presentez le QR au portail. Conteneur ${updated.containerNumber}.`,
       });
     }
     return updated;
@@ -431,11 +430,10 @@ export class AppointmentsService {
         `a été reporté au ${fmtD} · shift ${shiftCfg.label}.` +
         (dto.note ? `\nMotif : ${dto.note}` : '') +
         `\n\ne-depot — MEDLOG Côte d'Ivoire`,
-      waBody:
-        `🕓 MEDLOG e-depot — Rendez-vous REPORTÉ\n` +
-        `Réf : ${updated.reference}\nConteneur : ${updated.containerNumber}\n` +
-        `Nouvelle date : ${fmtD} · shift ${shiftCfg.label}` +
-        (dto.note ? `\nMotif : ${dto.note}` : ''),
+      smsBody:
+        `MEDLOG e-depot: RDV ${updated.reference} reporte au ${fmtD} shift ${shiftCfg.label}. ` +
+        `Conteneur ${updated.containerNumber}.` +
+        (dto.note ? ` Motif: ${dto.note}` : ''),
     });
     return updated;
   }
@@ -546,10 +544,9 @@ export class AppointmentsService {
           `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été ${label}.` +
           (note ? `\nMotif : ${note}` : '') +
           `\n\ne-depot — MEDLOG Côte d'Ivoire`,
-        waBody:
-          `❌ MEDLOG e-depot — Rendez-vous ${label.toUpperCase()}\n` +
-          `Réf : ${updated.reference}\nConteneur : ${updated.containerNumber}` +
-          (note ? `\nMotif : ${note}` : ''),
+        smsBody:
+          `MEDLOG e-depot: RDV ${updated.reference} ${label}. Conteneur ${updated.containerNumber}.` +
+          (note ? ` Motif: ${note}` : ''),
       });
     }
     return updated;
@@ -568,7 +565,7 @@ export class AppointmentsService {
    */
   private async notify(
     appt: { createdById: string; reference: string; containerNumber: string; driverPhone?: string | null },
-    opts: { emailSubject: string; emailBody: string; waBody: string },
+    opts: { emailSubject: string; emailBody: string; smsBody: string },
   ) {
     let creator: { email: string; phone: string | null } | null = null;
     try {
@@ -580,7 +577,7 @@ export class AppointmentsService {
       /* ignore */
     }
 
-    // E-mail au transporteur.
+    // E-mail au transporteur (si configuré).
     try {
       if (creator?.email && (await this.mail.isConfigured())) {
         await this.mail.send(creator.email, opts.emailSubject, opts.emailBody);
@@ -589,14 +586,14 @@ export class AppointmentsService {
       /* ignore */
     }
 
-    // WhatsApp au chauffeur ET au transporteur (numéros dédupliqués).
+    // SMS au chauffeur ET au transporteur (numéros dédupliqués), via la passerelle.
     try {
-      if (await this.whatsapp.isConfigured()) {
+      if (await this.sms.isConfigured()) {
         const numbers = [appt.driverPhone, creator?.phone]
           .map((n) => normalizeCIPhone(n))
           .filter((n): n is string => !!n);
         for (const to of [...new Set(numbers)]) {
-          await this.whatsapp.send(to, opts.waBody);
+          await this.sms.send(to, opts.smsBody);
         }
       }
     } catch {
@@ -605,15 +602,15 @@ export class AppointmentsService {
   }
 
   /**
-   * Notifie les agents et administrateurs MEDLOG (WhatsApp) d'une nouvelle demande de RDV.
-   * Ils peuvent répondre directement au message pour coordonner. Ne bloque jamais.
+   * Notifie par SMS les agents et administrateurs MEDLOG d'une nouvelle demande de RDV.
+   * Ne bloque jamais.
    */
   private async notifyStaffNewAppointment(appt: {
     reference: string; containerNumber: string; containerType: string; blNumber: string;
     requestedDate: Date; shiftCode: string | null; company?: { name?: string | null } | null;
   }) {
     try {
-      if (!(await this.whatsapp.isConfigured())) return;
+      if (!(await this.sms.isConfigured())) return;
       const staff = await this.prisma.user.findMany({
         where: { role: { in: ['AGENT', 'ADMIN'] }, active: true, phone: { not: null } },
         select: { phone: true },
@@ -621,14 +618,11 @@ export class AppointmentsService {
       const numbers = [...new Set(staff.map((s) => normalizeCIPhone(s.phone)).filter((n): n is string => !!n))];
       if (!numbers.length) return;
       const body =
-        `🆕 MEDLOG e-depot — Nouvelle demande de rendez-vous\n` +
-        `Réf : ${appt.reference}\n` +
-        `Transporteur : ${appt.company?.name ?? '—'}\n` +
-        `Conteneur : ${appt.containerNumber} (${appt.containerType}) · BL ${appt.blNumber}\n` +
-        `Souhait : ${AppointmentsService.fmtD(appt.requestedDate)} · shift ${appt.shiftCode ?? '—'}\n` +
-        `➡️ Ouvrir l'application : https://ci-apps.medlog.com/e-depot\n` +
-        `Vous pouvez répondre à ce message pour coordonner.`;
-      for (const to of numbers) await this.whatsapp.send(to, body);
+        `MEDLOG e-depot: nouvelle demande ${appt.reference} - ${appt.company?.name ?? '-'} - ` +
+        `conteneur ${appt.containerNumber} (${appt.containerType}) - ` +
+        `${AppointmentsService.fmtD(appt.requestedDate)} shift ${appt.shiftCode ?? '-'}. ` +
+        `A affecter: ci-apps.medlog.com/e-depot`;
+      for (const to of numbers) await this.sms.send(to, body);
     } catch {
       /* la notification ne doit jamais interrompre la création */
     }
