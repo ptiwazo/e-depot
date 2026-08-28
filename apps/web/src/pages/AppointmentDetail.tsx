@@ -70,6 +70,10 @@ export default function AppointmentDetail() {
     }
   }
 
+  // Lien d'itinéraire Google Maps vers l'OFF-DOCK affecté (navigation pour le chauffeur).
+  const mapsUrl = (lat: number, lng: number) =>
+    `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
   // Génère un laissez-passer PDF (A6 paysage) avec le QR code, imprimable au portail.
   function printPdf() {
     if (!appt || !qr) return;
@@ -101,21 +105,33 @@ export default function AppointmentDetail() {
       ['Conteneur', `${appt.containerNumber} (${appt.containerType})`],
       ['BL', appt.blNumber || '—'],
       ['OFF-DOCK', appt.offDock ? `${appt.offDock.code} — ${appt.offDock.city}` : '—'],
+      ...(appt.offDock
+        ? ([['GPS', `${appt.offDock.lat.toFixed(6)}, ${appt.offDock.lng.toFixed(6)}`]] as [string, string][])
+        : []),
       ['Shift', fmtShift(appt.slotStart, appt.slotEnd, appt.shiftCode)],
       ['Camion / remorque', `${appt.truckPlate ?? '—'} · ${appt.trailerPlate ?? '—'}`],
       ['Chauffeur', appt.driverName ?? '—'],
     ];
-    let y = 38;
+    let y = 36;
     for (const [k, v] of lines) {
       doc.setTextColor(139, 129, 120);
       doc.text(`${k} :`, 60, y);
       doc.setTextColor(34, 34, 33);
-      doc.text(String(v), 90, y);
-      y += 6.5;
+      doc.text(String(v), 88, y);
+      y += 6;
+    }
+    // Lien cliquable d'itinéraire (utile quand le laissez-passer est ouvert sur téléphone).
+    if (appt.offDock) {
+      doc.setTextColor(0, 83, 137);
+      doc.setFont('helvetica', 'bold');
+      doc.textWithLink("Ouvrir l'itineraire (Google Maps)", 60, y + 1, {
+        url: mapsUrl(appt.offDock.lat, appt.offDock.lng),
+      });
+      doc.setFont('helvetica', 'normal');
     }
     doc.setFontSize(7);
     doc.setTextColor(139, 129, 120);
-    doc.text('À présenter au portail de l\'OFF-DOCK affecté pour autorisation d\'entrée.', 8, 78);
+    doc.text('À présenter au portail de l\'OFF-DOCK affecté pour autorisation d\'entrée.', 8, 100);
 
     doc.save(`laissez-passer-${appt.reference}.pdf`);
   }
@@ -214,6 +230,20 @@ export default function AppointmentDetail() {
                 {qr ? <img src={qr} alt="QR code rendez-vous" /> : <div className="muted">QR indisponible</div>}
                 <div className="mono" style={{ marginTop: 12, fontSize: 16 }}>{appt.reference}</div>
                 {appt.offDock && <div className="muted">{appt.offDock.code} · {fmtShift(appt.slotStart, appt.slotEnd, appt.shiftCode)}</div>}
+                {appt.offDock && (
+                  <div style={{ marginTop: 10 }}>
+                    <div className="small muted mono">📍 {appt.offDock.lat.toFixed(6)}, {appt.offDock.lng.toFixed(6)}</div>
+                    <a
+                      className="btn sm"
+                      style={{ marginTop: 6 }}
+                      href={mapsUrl(appt.offDock.lat, appt.offDock.lng)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      🧭 Itinéraire vers l'OFF-DOCK
+                    </a>
+                  </div>
+                )}
                 {qr && (
                   <button className="btn dark" style={{ marginTop: 16 }} onClick={printPdf}>🖨 Imprimer le laissez-passer (PDF)</button>
                 )}
