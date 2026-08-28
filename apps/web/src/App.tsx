@@ -18,6 +18,7 @@ const CompaniesAdmin = lazy(() => import('./pages/CompaniesAdmin'));
 const AuditAdmin = lazy(() => import('./pages/AuditAdmin'));
 const ReportsAdmin = lazy(() => import('./pages/ReportsAdmin'));
 const AiDashboard = lazy(() => import('./pages/AiDashboard'));
+const Guide = lazy(() => import('./pages/Guide'));
 const AgentQueue = lazy(() => import('./pages/AgentQueue'));
 const ManifestAdmin = lazy(() => import('./pages/ManifestAdmin'));
 const Appointments = lazy(() => import('./pages/Appointments'));
@@ -83,6 +84,7 @@ export default function App() {
 
         <Route path="/appointments" element={<Protected roles={['ADMIN', 'AGENT', 'OPERATOR', 'DRIVER']}><Appointments /></Protected>} />
         <Route path="/appointment/:id" element={<Protected><AppointmentDetail /></Protected>} />
+        <Route path="/aide" element={<Protected><Guide /></Protected>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

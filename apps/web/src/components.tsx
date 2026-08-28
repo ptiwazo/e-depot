@@ -89,6 +89,7 @@ const ICONS: Record<string, ReactNode> = {
   plus: (<><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>),
   chart: (<><path d="M4 4v16h16" /><path d="M7.5 15l3-4 3 2 4-6" /></>),
   ai: (<><path d="M12 3.5l1.7 4.6 4.6 1.7-4.6 1.7L12 16.1l-1.7-4.6L5.7 9.8l4.6-1.7z" /><path d="M18 15l.7 1.9 1.9.7-1.9.7L18 20.2l-.7-1.9-1.9-.7 1.9-.7z" /></>),
+  help: (<><circle cx="12" cy="12" r="9" /><path d="M9.6 9.2a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1 .9-1 1.7" /><circle cx="12" cy="16.4" r="0.7" fill="currentColor" /></>),
   audit: (<><rect x="4" y="3" width="16" height="18" rx="1.5" /><path d="M8 8h8M8 12h8M8 16h5" /></>),
   report: (<><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4" /><path d="M9 13v4M12 11v6M15 14v3" /></>),
 };
@@ -185,6 +186,10 @@ export function Layout({ children, title }: { children: ReactNode; title: string
           </NavLink>
         ))}
         <div className="spacer" />
+        <NavLink to="/aide" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          <span className="nav-ico"><Icon name="help" /></span>
+          <span>Mode d'emploi</span>
+        </NavLink>
         <div className="userbox">
           <b>{user.name}</b>
           {user.company || user.offDock || ROLE_LABEL[user.role]}
