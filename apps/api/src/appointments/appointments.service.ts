@@ -340,19 +340,22 @@ export class AppointmentsService {
     await this.audit(user.id, 'APPOINTMENT_ASSIGN', id, { offDock: offDock.code, shift: shift.code });
     {
       const dateStr = `${AppointmentsService.fmtD(shift.start)} · ${shift.label} (${AppointmentsService.fmtH(shift.start)}–${AppointmentsService.fmtH(shift.end)})`;
+      // Lien d'itinéraire Google Maps vers l'OFF-DOCK (navigation pour le chauffeur).
+      const maps = `https://www.google.com/maps/dir/?api=1&destination=${offDock.lat},${offDock.lng}`;
       // Notifications en arrière-plan (fire-and-forget) : ne JAMAIS bloquer la réponse
-      // sur des appels externes (WhatsApp/e-mail), sinon l'action semble planter.
+      // sur des appels externes (SMS/e-mail), sinon l'action semble planter.
       void this.notify(updated, {
         emailSubject: `RDV ${updated.reference} confirmé — ${offDock.code}`,
         emailBody:
           `Bonjour,\n\nVotre rendez-vous ${updated.reference} (conteneur ${updated.containerNumber}) a été affecté.\n` +
           `OFF-DOCK : ${offDock.code} — ${offDock.name}, ${offDock.city}\n` +
-          `Créneau : le ${dateStr}\n\n` +
+          `Créneau : le ${dateStr}\n` +
+          `Itinéraire : ${maps}\n\n` +
           `Présentez le QR code de votre demande au portail du site.\n\ne-depot — MEDLOG Côte d'Ivoire`,
         smsBody:
           `MEDLOG e-depot: RDV ${updated.reference} confirme. ` +
           `OFF-DOCK ${offDock.code} (${offDock.city}), le ${dateStr}. ` +
-          `Presentez le QR au portail. Conteneur ${updated.containerNumber}.`,
+          `Conteneur ${updated.containerNumber}. Itineraire: ${maps}`,
       });
     }
     return updated;
